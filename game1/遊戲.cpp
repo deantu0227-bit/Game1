@@ -204,36 +204,6 @@ void adminPanel(Character& p, int& gold, int& potions, int& wave, int& mHp, int&
         waitPlayer();
     }
 }
-    while (true) {
-        clearScreen();
-        cout << "=========================================\n       ⚙️ 開發者控制模式 (Admin) ⚙️       \n=========================================\n";
-        cout << " [1] 修改最大生命 (目前: " << p.maxHp << ")\n";
-        cout << " [2] 修改基礎攻擊 (目前: " << p.baseAtk << ")\n";
-        cout << " [3] 修改金幣數量 (目前: " << gold << ")\n";
-        cout << " [4] 修改藥水數量 (目前: " << potions << ")\n";
-        cout << " [5] 修改目前波數 (目前: " << wave << ")\n";
-        if (mHp != -1) {
-            cout << " [6] 修改怪物血量 (目標: " << mName << " HP:" << mHp << ")\n";
-            cout << " [7] 修改怪物攻擊 (目標: " << mName << " ATK:" << mAtk << ")\n";
-        }
-        cout << " [0] ↩️ 返回遊戲\n=========================================\n請選擇要修改的項目 (0-7): ";
-        int choice; if (!(cin >> choice)) { cin.clear(); cin.ignore(1000, '\n'); continue; }
-        cin.ignore(1000, '\n');
-        if (choice == 0) break;
-        cout << "👉 請輸入新的數值: ";
-        int newVal; if (!(cin >> newVal)) { cin.clear(); cin.ignore(1000, '\n'); continue; }
-        cin.ignore(1000, '\n');
-
-        if (choice == 1) { p.baseHp = newVal; p.updateStats(); p.hp = p.maxHp; cout << "✅ 修改成功！\n"; }
-        else if (choice == 2) { p.baseAtk = newVal; p.updateStats(); cout << "✅ 修改成功！\n"; }
-        else if (choice == 3) { gold = newVal; cout << "✅ 修改成功！\n"; }
-        else if (choice == 4) { potions = newVal; cout << "✅ 修改成功！\n"; }
-        else if (choice == 5) { wave = newVal; cout << "✅ 修改成功！(下一波生效)\n"; }
-        else if (choice == 6 && mHp != -1) { mHp = newVal; cout << "✅ 修改成功！\n"; }
-        else if (choice == 7 && mHp != -1) { mAtk = newVal; cout << "✅ 修改成功！\n"; }
-        waitPlayer();
-    }
-}
 
 // 🌟 技能資料庫初始化
 void initAllSkills(Skill db[15][3]) {
@@ -334,11 +304,39 @@ int main() {
         cout << "          [ 1 ] 🟢 建立新角色 (新冒險)\n";
         cout << "          [ 2 ] 💾 選擇存檔 (讀取進度)\n";
         cout << "          [ 3 ] 📜 觀看職業與魔物圖鑑\n";
-        cout << "          [ 4 ] ❌ 離開遊戲\n=========================================\n請選擇 (1-4): ";
+        cout << "          [ 4 ] 📖 遊戲簡介 (故事與玩法)\n";
+        cout << "          [ 5 ] ❌ 離開遊戲\n=========================================\n請選擇 (1-5): ";
         int menuChoice; if (!(cin >> menuChoice)) { cin.clear(); cin.ignore(1000, '\n'); continue; }
         cin.ignore(1000, '\n');
 
-        if (menuChoice == 4) return 0;
+        if (menuChoice == 5) return 0;
+        else if (menuChoice == 4) {
+            clearScreen();
+            cout << "=========================================\n";
+            cout << "        📖 遊戲簡介 ── 勇者傳說：宿命之絆        \n";
+            cout << "=========================================\n";
+            cout << "【故事背景】\n";
+            cout << " 守護大陸的聖物遭到竊取，黑夜隨之降臨，\n";
+            cout << " 魔物自迷霧森林湧出，吞噬著人們的希望。\n";
+            cout << " 身為被命運選中的勇者，你必須穿越三大章節，\n";
+            cout << " 一路討伐魔物，最終擊敗【遠古滅世巨龍】，奪回聖物！\n\n";
+            cout << "【玩法說明】\n";
+            cout << " ⚔️ 波次戰鬥：以回合制迎戰一波波魔物，共 10 波。\n";
+            cout << " 🌟 職業系統：14 種職業 + 隱藏職，可自選或命運抽卡 (含 SSR)。\n";
+            cout << " 💪 屬性配點：升級獲得點數，投資力量/體質/敏捷/幸運。\n";
+            cout << " 🔮 技能連招：每個職業有 3 招專屬技能，隨等級解鎖。\n";
+            cout << " 🧪 狀態效果：點燃、中毒、暈眩、吸血、攻防增益等。\n";
+            cout << " 🏪 流浪商人：每逢偶數波可補給藥水並儲存進度。\n\n";
+            cout << "【三大章節】\n";
+            cout << " 第一章 🌲 迷霧森林   → BOSS 👑 哥布林酋長\n";
+            cout << " 第二章 💀 地下墓穴   → BOSS 🔮 不死巫妖王\n";
+            cout << " 第三章 🌋 終焉戰場   → BOSS 🐉 遠古滅世巨龍\n\n";
+            cout << "【操作方式】\n";
+            cout << " 依畫面提示輸入對應數字選擇行動，戰鬥中可\n";
+            cout << " 1.普通攻擊  2.使用技能  3.喝藥水。祝你好運，勇者！\n";
+            cout << "=========================================\n";
+            waitPlayer(); continue;
+        }
         else if (menuChoice == 3) {
             clearScreen();
             cout << "================= 📜 魔物情報與圖鑑 =================\n";
@@ -531,7 +529,7 @@ int main() {
             if (mBurnDuration > 0) {
                 cout << "🔥 燃燒效果發作！" << mName << " 受到了 " << mBurnDamage << " 點灼燒傷害！\n";
                 mHp -= mBurnDamage; mBurnDuration--;
-                if (mHp <= 0) { cout << "💀 魔物被燒死了！\n"; break; }
+                if (mHp <= 0) { cout << "💀 魔物被燒死了！\n"; cout << "\n🎉 勝利！獲得經驗值與金幣！\n"; gold += 25 + (wave * 2); waitPlayer(); break; }
             }
 
             cout << "1. 🗡️ 普通攻擊 | 2. 🔮 使用技能 | 3. 🧪 喝藥水\n";
@@ -580,7 +578,7 @@ int main() {
                 player.mp = min(player.maxMp, player.mp + player.mpRegen);
             } else continue;
 
-            if (mHp <= 0) { cout << "\n🎉 勝利！獲得經驗值與金幣！\n"; gold += 25 + (wave * 2); break; }
+            if (mHp <= 0) { cout << "\n🎉 勝利！擊敗了 " << mName << "！獲得經驗值與金幣！\n"; gold += 25 + (wave * 2); waitPlayer(); break; }
 
             // 🌟 怪物反擊與施放專屬技能
             cout << "\n--- " << mName << " 的回合 ---\n";
@@ -619,13 +617,28 @@ int main() {
                 player.takeDamage(monsterDamage);
             }
 
-            if (!player.isAlive()) { cout << "💀 你倒下了... 請重新讀檔再來吧！\n"; break; }
+            if (!player.isAlive()) { cout << "💀 你倒下了... 請重新讀檔再來吧！\n"; waitPlayer(); break; }
             waitPlayer();
         }
         if(player.isAlive()){
             wave++;
+            cout << "\n=================================================\n";
+            cout << " 📈 【戰後結算】目前已推進至第 " << wave << " 波\n";
+            cout << "=================================================\n";
             player.gainExp(50 + wave * 5);
+            if (wave > 10) { cout << "\n🏆🏆🏆 恭喜你！已擊敗最終滅世BOSS，拯救了世界！ 🏆🏆🏆\n"; waitPlayer(); break; }
+            waitPlayer();
         }
+    }
+    if (!player.isAlive()) {
+        clearScreen();
+        cout << "=================================================\n";
+        cout << "                💀 遊戲結束 💀                 \n";
+        cout << "=================================================\n";
+        cout << " 勇者 " << player.name << " (" << player.job << " Lv." << player.level << ") 倒下了...\n";
+        cout << " 你堅持到了第 " << wave << " 波。下次讀取存檔再來挑戰吧！\n";
+        cout << "=================================================\n";
+        waitPlayer();
     }
     return 0;
 }
