@@ -541,10 +541,13 @@ int main() {
 
             if (isControlMode && choice == 0) { adminPanel(player, gold, potions, wave, mHp, mAtk, mName); continue; }
             else if (choice == 1) {
+                cout << "\n========== ⚔️ 你的回合 ==========\n";
+                cout << "🗡️ 你朝著 " << mName << " 揮出一擊！\n";
                 finalDamage = player.atk + pAtkBuff + (rand() % 6 - 3);
-                if (rand() % 100 < player.critChance) { finalDamage *= 2; cout << "🔥 暴擊！\n"; }
+                if (rand() % 100 < player.critChance) { finalDamage *= 2; cout << "🔥 暴擊！威力翻倍！\n"; }
                 tookAction = true;
             } else if (choice == 2) {
+                cout << "\n========== ⚔️ 你的回合 ==========\n";
                 for (int i=0; i<3; i++) {
                     Skill sk = skillDatabase[jobIndex][i];
                     if (player.job == "創造神" || player.level >= sk.reqLevel) {
@@ -574,14 +577,16 @@ int main() {
             }
 
             if (tookAction) {
-                if (finalDamage > 0) { mHp -= finalDamage; cout << " 👉 造成了 " << finalDamage << " 點直接傷害！\n"; }
+                if (finalDamage > 0) { mHp -= finalDamage; cout << " 👉 造成了 " << finalDamage << " 點直接傷害！ (" << mName << " 剩餘 HP: " << (mHp < 0 ? 0 : mHp) << ")\n"; }
                 player.mp = min(player.maxMp, player.mp + player.mpRegen);
             } else continue;
 
             if (mHp <= 0) { cout << "\n🎉 勝利！擊敗了 " << mName << "！獲得經驗值與金幣！\n"; gold += 25 + (wave * 2); waitPlayer(); break; }
 
+            waitPlayer(); // 先讓玩家看清自己這回合的攻擊結果，再進入敵方回合
+
             // 🌟 怪物反擊與施放專屬技能
-            cout << "\n--- " << mName << " 的回合 ---\n";
+            cout << "\n========== 👹 " << mName << " 的回合 ==========\n";
             if (mStunned) {
                 cout << "⚡ " << mName << " 處於暈眩狀態，無法行動！\n";
                 mStunned = false;
