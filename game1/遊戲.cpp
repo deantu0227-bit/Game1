@@ -535,7 +535,8 @@ int main() {
             cout << "1. 🗡️ 普通攻擊 | 2. 🔮 使用技能 | 3. 🧪 喝藥水\n";
             if (isControlMode) cout << "0. ⚙️ 開啟控制台\n";
             cout << "選擇行動: ";
-            int choice; cin >> choice;
+            int choice; if (!(cin >> choice)) { cin.clear(); cin.ignore(1000, '\n'); continue; }
+            cin.ignore(1000, '\n'); // 清掉殘留換行，否則 waitPlayer 會被跳過
 
             int finalDamage = 0; bool tookAction = false;
 
@@ -554,7 +555,8 @@ int main() {
                         cout << "[" << i+1 << "] " << sk.name << " (耗魔:" << sk.mpCost << ") " << sk.effect << "\n";
                     } else cout << "[" << i+1 << "] ??? (Lv." << sk.reqLevel << " 解鎖)\n";
                 }
-                cout << "選擇技能 (1-3): "; int skChoice; cin >> skChoice;
+                cout << "選擇技能 (1-3): "; int skChoice; if (!(cin >> skChoice)) { cin.clear(); cin.ignore(1000, '\n'); continue; }
+                cin.ignore(1000, '\n'); // 清掉殘留換行
                 if (skChoice >= 1 && skChoice <= 3) {
                     Skill sk = skillDatabase[jobIndex][skChoice-1];
                     if (player.level < sk.reqLevel && player.job != "創造神") cout << "❌ 等級不足，尚未領悟此技能！\n";
