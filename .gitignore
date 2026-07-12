@@ -2,3 +2,6 @@
 *.exe
 *.o
 *.obj
+
+# Runtime save files
+rpg_save_slot*.txt
