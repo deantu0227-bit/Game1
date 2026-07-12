@@ -11,6 +11,8 @@ using namespace std;
 // === 基礎結構 ===
 struct Equipment {
     string name; string type; int value; int subValue;
+    string element; // 武器元素：火/冰/雷/毒/無
+    int elemValue;  // 元素效果強度（如灼燒/中毒每回合傷害）
 };
 
 struct Skill {
@@ -71,8 +73,8 @@ public:
     Character(string n, string j, int h, int a, int m, int r) {
         name = n; job = j; level = 1; exp = 0; maxExp = 100; statPoints = 0;
         baseHp = h; baseAtk = a; strength = 0; constitution = 0; agility = 0; lucky = 0;
-        weapon = { "新手舊劍", "Weapon", 0, 5 };
-        armor = { "破舊布衣", "Armor", 0, 5 };
+        weapon = { "新手舊劍", "Weapon", 0, 5, "無", 0 };
+        armor = { "破舊布衣", "Armor", 0, 5, "無", 0 };
         updateStats();
         hp = maxHp; mp = m; maxMp = m; mpRegen = r;
     }
@@ -143,10 +145,61 @@ void saveGame(Character& p, int gold, int potions, int wave, int slot) {
             << p.strength << "\n" << p.constitution << "\n" << p.agility << "\n" << p.lucky << "\n"
             << gold << "\n" << potions << "\n" << wave << "\n"
             << p.weapon.name << "\n" << p.weapon.value << "\n" << p.weapon.subValue << "\n"
-            << p.armor.name << "\n" << p.armor.value << "\n" << p.armor.subValue << "\n";
+            << p.armor.name << "\n" << p.armor.value << "\n" << p.armor.subValue << "\n"
+            << p.weapon.element << "\n" << p.weapon.elemValue << "\n";
     outFile.close();
     cout << "💾 【系統提示】進度已成功儲存至 檔號 " << slot << "！\n";
     waitPlayer();
+}
+
+// 🌟 武器商店：販售帶有元素屬性的武器
+void weaponShop(Character& p, int& gold) {
+    // 商品：名稱, 攻擊加成, 暴擊加成, 元素, 元素強度, 售價
+    struct WeaponItem { Equipment eq; int price; };
+    WeaponItem shopList[6] = {
+        { {"精鋼劍",   "Weapon", 15, 3,  "無", 0 },  80 },
+        { {"淬毒匕首", "Weapon", 25, 8,  "毒", 12 }, 300 },
+        { {"烈焰長劍", "Weapon", 30, 5,  "火", 15 }, 320 },
+        { {"寒冰之刃", "Weapon", 28, 6,  "冰", 0 },  320 },
+        { {"雷神之槍", "Weapon", 35, 7,  "雷", 0 },  450 },
+        { {"秘銀聖劍", "Weapon", 50, 10, "無", 0 },  600 }
+    };
+    while (true) {
+        clearScreen();
+        cout << "=================================\n         🗡️ 武器鍛造鋪         \n=================================\n";
+        cout << " 金幣: ✨ " << gold << "\n";
+        cout << " 目前武器: 【" << p.weapon.name << "】 攻+" << p.weapon.value
+             << " 暴+" << p.weapon.subValue << " 屬性:" << p.weapon.element << "\n";
+        cout << "---------------------------------\n";
+        for (int i = 0; i < 6; i++) {
+            Equipment& e = shopList[i].eq;
+            cout << " [" << (i + 1) << "] " << e.name << " ｜ 攻+" << e.value << " 暴+" << e.subValue;
+            if (e.element != "無") {
+                cout << " ｜ " << e.element << "屬性";
+                if (e.elemValue > 0) cout << "(每回合傷害 " << e.elemValue << ")";
+            }
+            cout << " ｜ 💰" << shopList[i].price << "\n";
+        }
+        cout << " [0] 🏃 離開武器店\n";
+        cout << "---------------------------------\n";
+        cout << " 說明：火/毒→持續傷害，雷/冰→機率使敵人麻痺\n";
+        cout << "請選擇要購買的武器 (0-6): ";
+        int c; if (!(cin >> c)) { cin.clear(); cin.ignore(1000, '\n'); continue; }
+        cin.ignore(1000, '\n');
+        if (c == 0) break;
+        if (c >= 1 && c <= 6) {
+            WeaponItem& wi = shopList[c - 1];
+            if (gold >= wi.price) {
+                gold -= wi.price;
+                p.weapon = wi.eq;
+                p.updateStats();
+                cout << "🛒 購買並裝備了【" << p.weapon.name << "】！攻擊力提升至 " << p.atk << "！\n";
+            } else {
+                cout << "❌ 金幣不足！還差 " << (wi.price - gold) << " 金幣。\n";
+            }
+            waitPlayer();
+        }
+    }
 }
 
 // 🌟 開發者控制台函式
@@ -379,6 +432,13 @@ int main() {
                 inFile.ignore();
                 getline(inFile, player.weapon.name); inFile >> player.weapon.value >> player.weapon.subValue; inFile.ignore();
                 getline(inFile, player.armor.name); inFile >> player.armor.value >> player.armor.subValue;
+                // 武器元素（舊存檔沒有這兩欄，讀取失敗時保持預設「無」）
+                player.weapon.element = "無"; player.weapon.elemValue = 0;
+                inFile.ignore();
+                if (getline(inFile, player.weapon.element)) {
+                    if (player.weapon.element.empty()) player.weapon.element = "無";
+                    inFile >> player.weapon.elemValue;
+                }
                 inFile.close();
                 player.updateStats();
                 isLoaded = true; currentSaveSlot = slotChoice;
@@ -434,8 +494,8 @@ int main() {
         player.agility += jt.agiBonus; player.lucky += jt.lukBonus;
 
         if (selectedJobIdx == 14) {
-            player.weapon = {"造物主的指令", "Weapon", 500, 100};
-            player.armor = {"系統防火牆", "Armor", 5000, 100};
+            player.weapon = {"造物主的指令", "Weapon", 500, 100, "雷", 999};
+            player.armor = {"系統防火牆", "Armor", 5000, 100, "無", 0};
         }
         player.updateStats(); player.hp = player.maxHp;
 
@@ -467,7 +527,7 @@ int main() {
                 clearScreen();
                 cout << "=================================\n         🏪 流浪商人營地         \n=================================\n";
                 cout << " 金幣: ✨ " << gold << " | 藥水: 🧪 " << potions << " | 勇者等級: Lv." << player.level << "\n---------------------------------\n";
-                cout << "1. 🛒 購買生命藥水 (💰 20 金幣)\n2. 💾 儲存目前遊戲進度\n3. 🏃 離開營地繼續前進\n";
+                cout << "1. 🛒 購買生命藥水 (💰 20 金幣)\n2. 🗡️ 逛武器鍛造鋪 (購買武器)\n3. 💾 儲存目前遊戲進度\n4. 🏃 離開營地繼續前進\n";
                 if (isControlMode) cout << "0. ⚙️ 開啟控制台 (修改數值)\n";
                 cout << "請選擇: ";
                 int shopChoice; if (!(cin >> shopChoice)) { cin.clear(); cin.ignore(1000, '\n'); continue; }
@@ -476,8 +536,9 @@ int main() {
                 if (shopChoice == 1) {
                     if (gold >= 20) { gold -= 20; potions++; cout << "🛒 購買成功！\n"; } else { cout << "❌ 金幣不足！\n"; } waitPlayer();
                 }
-                else if (shopChoice == 2) { saveGame(player, gold, potions, wave, currentSaveSlot); }
-                else if (shopChoice == 3) { inShop = false; }
+                else if (shopChoice == 2) { weaponShop(player, gold); }
+                else if (shopChoice == 3) { saveGame(player, gold, potions, wave, currentSaveSlot); }
+                else if (shopChoice == 4) { inShop = false; }
                 else if (isControlMode && shopChoice == 0) { int dummy = -1; adminPanel(player, gold, potions, wave, dummy, dummy, ""); }
             }
         }
@@ -511,6 +572,7 @@ int main() {
             cout << "=================================================\n";
             cout << " 【" << player.name << "】(" << player.job << ") Lv." << player.level << "\n";
             cout << "  💖 HP: " << player.hp << "/" << player.maxHp << " | ✨ MP: " << player.mp << "/" << player.maxMp << " | 🧪 x" << potions << "\n";
+            cout << "  🗡️ 武器: " << player.weapon.name << (player.weapon.element != "無" ? " (" + player.weapon.element + "屬性)" : "") << "\n";
             if (pAtkBuff > 0) cout << "  [狀態] ⚔️ 攻擊提升 +" << pAtkBuff << "\n";
             if (pDefBuff > 0) cout << "  [狀態] 🛡️ 防禦提升 +" << pDefBuff << "\n";
             if (pBurnDuration > 0) cout << "  [異常] 🤢 中毒流血中 (剩餘 " << pBurnDuration << " 回合)\n";
@@ -543,9 +605,22 @@ int main() {
             if (isControlMode && choice == 0) { adminPanel(player, gold, potions, wave, mHp, mAtk, mName); continue; }
             else if (choice == 1) {
                 cout << "\n========== ⚔️ 你的回合 ==========\n";
-                cout << "🗡️ 你朝著 " << mName << " 揮出一擊！\n";
+                cout << "🗡️ 你揮舞【" << player.weapon.name << "】朝著 " << mName << " 攻擊！\n";
                 finalDamage = player.atk + pAtkBuff + (rand() % 6 - 3);
                 if (rand() % 100 < player.critChance) { finalDamage *= 2; cout << "🔥 暴擊！威力翻倍！\n"; }
+                // 🌟 武器元素屬性觸發
+                string el = player.weapon.element;
+                if (el == "火") {
+                    mBurnDamage = player.weapon.elemValue; mBurnDuration = 2;
+                    cout << " ➥ 🔥【火焰附魔】點燃了 " << mName << "！(每回合 -" << mBurnDamage << ")\n";
+                } else if (el == "毒") {
+                    mBurnDamage = player.weapon.elemValue; mBurnDuration = 3;
+                    cout << " ➥ 🐍【劇毒附魔】" << mName << " 陷入中毒！(每回合 -" << mBurnDamage << ")\n";
+                } else if (el == "雷") {
+                    if (rand() % 100 < 35) { mStunned = true; cout << " ➥ ⚡【雷電附魔】" << mName << " 被電得麻痺了！\n"; }
+                } else if (el == "冰") {
+                    if (rand() % 100 < 35) { mStunned = true; cout << " ➥ ❄️【寒冰附魔】" << mName << " 被凍結，無法行動！\n"; }
+                }
                 tookAction = true;
             } else if (choice == 2) {
                 cout << "\n========== ⚔️ 你的回合 ==========\n";
