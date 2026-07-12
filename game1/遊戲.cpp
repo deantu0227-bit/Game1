@@ -146,57 +146,120 @@ void saveGame(Character& p, int gold, int potions, int wave, int slot) {
             << gold << "\n" << potions << "\n" << wave << "\n"
             << p.weapon.name << "\n" << p.weapon.value << "\n" << p.weapon.subValue << "\n"
             << p.armor.name << "\n" << p.armor.value << "\n" << p.armor.subValue << "\n"
-            << p.weapon.element << "\n" << p.weapon.elemValue << "\n";
+            << p.weapon.element << "\n" << p.weapon.elemValue << "\n"
+            << p.armor.element << "\n" << p.armor.elemValue << "\n";
     outFile.close();
     cout << "💾 【系統提示】進度已成功儲存至 檔號 " << slot << "！\n";
     waitPlayer();
 }
 
-// 🌟 武器商店：販售帶有元素屬性的武器
-void weaponShop(Character& p, int& gold) {
-    // 商品：名稱, 攻擊加成, 暴擊加成, 元素, 元素強度, 售價
-    struct WeaponItem { Equipment eq; int price; };
-    WeaponItem shopList[6] = {
-        { {"精鋼劍",   "Weapon", 15, 3,  "無", 0 },  80 },
-        { {"淬毒匕首", "Weapon", 25, 8,  "毒", 12 }, 300 },
-        { {"烈焰長劍", "Weapon", 30, 5,  "火", 15 }, 320 },
-        { {"寒冰之刃", "Weapon", 28, 6,  "冰", 0 },  320 },
-        { {"雷神之槍", "Weapon", 35, 7,  "雷", 0 },  450 },
-        { {"秘銀聖劍", "Weapon", 50, 10, "無", 0 },  600 }
+// 商店商品通用結構：裝備本體、售價、最低登場章節
+struct ShopItem { Equipment eq; int price; int minCh; };
+
+// 依章節從商品池隨機挑出本次販售的品項（每次進店都不一樣）
+vector<int> rollStock(ShopItem pool[], int poolSize, int chapter, int maxOffer) {
+    vector<int> eligible;
+    for (int i = 0; i < poolSize; i++) if (pool[i].minCh <= chapter) eligible.push_back(i);
+    // Fisher-Yates 洗牌
+    for (int i = (int)eligible.size() - 1; i > 0; i--) { int j = rand() % (i + 1); swap(eligible[i], eligible[j]); }
+    int n = min((int)eligible.size(), maxOffer);
+    return vector<int>(eligible.begin(), eligible.begin() + n);
+}
+
+// 🌟 武器商店：販售帶有元素屬性的武器（隨章節變強、每次進貨隨機）
+void weaponShop(Character& p, int& gold, int chapter) {
+    ShopItem pool[] = {
+        { {"精鋼劍",   "Weapon", 15, 3,  "無", 0 },  80,   1 },
+        { {"淬毒匕首", "Weapon", 25, 8,  "毒", 12 }, 250,  1 },
+        { {"烈焰長劍", "Weapon", 30, 5,  "火", 15 }, 320,  1 },
+        { {"寒冰之刃", "Weapon", 45, 6,  "冰", 0 },  420,  2 },
+        { {"雷神之槍", "Weapon", 55, 7,  "雷", 0 },  520,  2 },
+        { {"獄炎巨劍", "Weapon", 60, 5,  "火", 30 }, 560,  2 },
+        { {"秘銀聖劍", "Weapon", 85, 10, "無", 0 },  720,  3 },
+        { {"死亡鐮刀", "Weapon", 95, 8,  "毒", 40 }, 850,  3 },
+        { {"雷霆審判", "Weapon", 110,10, "雷", 0 },  1050, 3 }
     };
+    int poolSize = sizeof(pool) / sizeof(pool[0]);
+    vector<int> offer = rollStock(pool, poolSize, chapter, 4); // 進店時決定本次庫存
+    int offerCount = (int)offer.size();
+
     while (true) {
         clearScreen();
         cout << "=================================\n         🗡️ 武器鍛造鋪         \n=================================\n";
-        cout << " 金幣: ✨ " << gold << "\n";
+        cout << " 金幣: ✨ " << gold << "  (第 " << chapter << " 章精選 " << offerCount << " 件)\n";
         cout << " 目前武器: 【" << p.weapon.name << "】 攻+" << p.weapon.value
              << " 暴+" << p.weapon.subValue << " 屬性:" << p.weapon.element << "\n";
         cout << "---------------------------------\n";
-        for (int i = 0; i < 6; i++) {
-            Equipment& e = shopList[i].eq;
+        for (int i = 0; i < offerCount; i++) {
+            Equipment& e = pool[offer[i]].eq;
             cout << " [" << (i + 1) << "] " << e.name << " ｜ 攻+" << e.value << " 暴+" << e.subValue;
             if (e.element != "無") {
                 cout << " ｜ " << e.element << "屬性";
-                if (e.elemValue > 0) cout << "(每回合傷害 " << e.elemValue << ")";
+                if (e.elemValue > 0) cout << "(每回合 " << e.elemValue << ")";
             }
-            cout << " ｜ 💰" << shopList[i].price << "\n";
+            cout << " ｜ 💰" << pool[offer[i]].price << "\n";
         }
-        cout << " [0] 🏃 離開武器店\n";
-        cout << "---------------------------------\n";
+        cout << " [0] 🏃 離開武器店\n---------------------------------\n";
         cout << " 說明：火/毒→持續傷害，雷/冰→機率使敵人麻痺\n";
-        cout << "請選擇要購買的武器 (0-6): ";
+        cout << "請選擇 (0-" << offerCount << "): ";
         int c; if (!(cin >> c)) { cin.clear(); cin.ignore(1000, '\n'); continue; }
         cin.ignore(1000, '\n');
         if (c == 0) break;
-        if (c >= 1 && c <= 6) {
-            WeaponItem& wi = shopList[c - 1];
+        if (c >= 1 && c <= offerCount) {
+            ShopItem& wi = pool[offer[c - 1]];
             if (gold >= wi.price) {
-                gold -= wi.price;
-                p.weapon = wi.eq;
-                p.updateStats();
+                gold -= wi.price; p.weapon = wi.eq; p.updateStats();
                 cout << "🛒 購買並裝備了【" << p.weapon.name << "】！攻擊力提升至 " << p.atk << "！\n";
-            } else {
-                cout << "❌ 金幣不足！還差 " << (wi.price - gold) << " 金幣。\n";
-            }
+            } else cout << "❌ 金幣不足！還差 " << (wi.price - gold) << " 金幣。\n";
+            waitPlayer();
+        }
+    }
+}
+
+// 🌟 防具商店：販售帶有防禦特性的防具（隨章節變強、每次進貨隨機）
+// 防具 element：無 / 反傷(反彈%傷害) / 減傷(減免%傷害)，elemValue 為百分比
+void armorShop(Character& p, int& gold, int chapter) {
+    ShopItem pool[] = {
+        { {"鐵甲",       "Armor", 20, 3,  "無",   0 },  90,   1 },
+        { {"荊棘背心",   "Armor", 15, 2,  "反傷", 25 }, 280,  1 },
+        { {"厚重板甲",   "Armor", 40, 0,  "減傷", 15 }, 340,  1 },
+        { {"精鋼鎧",     "Armor", 60, 4,  "無",   0 },  450,  2 },
+        { {"復仇之盾甲", "Armor", 45, 3,  "反傷", 40 }, 600,  2 },
+        { {"龍鱗甲",     "Armor", 80, 2,  "減傷", 25 }, 700,  2 },
+        { {"聖光鎧",     "Armor", 120,6,  "無",   0 },  900,  3 },
+        { {"荊棘魔鎧",   "Armor", 90, 4,  "反傷", 60 }, 1100, 3 },
+        { {"不滅神甲",   "Armor", 150,3,  "減傷", 35 }, 1300, 3 }
+    };
+    int poolSize = sizeof(pool) / sizeof(pool[0]);
+    vector<int> offer = rollStock(pool, poolSize, chapter, 4);
+    int offerCount = (int)offer.size();
+
+    while (true) {
+        clearScreen();
+        cout << "=================================\n         🛡️ 防具鎧甲鋪         \n=================================\n";
+        cout << " 金幣: ✨ " << gold << "  (第 " << chapter << " 章精選 " << offerCount << " 件)\n";
+        cout << " 目前防具: 【" << p.armor.name << "】 防+" << p.armor.value
+             << " 閃+" << p.armor.subValue << " 特性:" << p.armor.element
+             << (p.armor.element != "無" ? " " + to_string(p.armor.elemValue) + "%" : "") << "\n";
+        cout << "---------------------------------\n";
+        for (int i = 0; i < offerCount; i++) {
+            Equipment& e = pool[offer[i]].eq;
+            cout << " [" << (i + 1) << "] " << e.name << " ｜ 防+" << e.value << " 閃+" << e.subValue;
+            if (e.element != "無") cout << " ｜ " << e.element << " " << e.elemValue << "%";
+            cout << " ｜ 💰" << pool[offer[i]].price << "\n";
+        }
+        cout << " [0] 🏃 離開防具店\n---------------------------------\n";
+        cout << " 說明：減傷→受擊時減少傷害，反傷→反彈部分傷害給敵人\n";
+        cout << "請選擇 (0-" << offerCount << "): ";
+        int c; if (!(cin >> c)) { cin.clear(); cin.ignore(1000, '\n'); continue; }
+        cin.ignore(1000, '\n');
+        if (c == 0) break;
+        if (c >= 1 && c <= offerCount) {
+            ShopItem& ai = pool[offer[c - 1]];
+            if (gold >= ai.price) {
+                gold -= ai.price; p.armor = ai.eq; p.updateStats();
+                cout << "🛒 購買並穿上了【" << p.armor.name << "】！最大生命提升至 " << p.maxHp << "！\n";
+            } else cout << "❌ 金幣不足！還差 " << (ai.price - gold) << " 金幣。\n";
             waitPlayer();
         }
     }
@@ -432,12 +495,17 @@ int main() {
                 inFile.ignore();
                 getline(inFile, player.weapon.name); inFile >> player.weapon.value >> player.weapon.subValue; inFile.ignore();
                 getline(inFile, player.armor.name); inFile >> player.armor.value >> player.armor.subValue;
-                // 武器元素（舊存檔沒有這兩欄，讀取失敗時保持預設「無」）
+                // 武器/防具元素（舊存檔沒有這些欄，讀取失敗時保持預設「無」）
                 player.weapon.element = "無"; player.weapon.elemValue = 0;
+                player.armor.element = "無"; player.armor.elemValue = 0;
                 inFile.ignore();
                 if (getline(inFile, player.weapon.element)) {
                     if (player.weapon.element.empty()) player.weapon.element = "無";
-                    inFile >> player.weapon.elemValue;
+                    inFile >> player.weapon.elemValue; inFile.ignore();
+                    if (getline(inFile, player.armor.element)) {
+                        if (player.armor.element.empty()) player.armor.element = "無";
+                        inFile >> player.armor.elemValue;
+                    }
                 }
                 inFile.close();
                 player.updateStats();
@@ -527,7 +595,8 @@ int main() {
                 clearScreen();
                 cout << "=================================\n         🏪 流浪商人營地         \n=================================\n";
                 cout << " 金幣: ✨ " << gold << " | 藥水: 🧪 " << potions << " | 勇者等級: Lv." << player.level << "\n---------------------------------\n";
-                cout << "1. 🛒 購買生命藥水 (💰 20 金幣)\n2. 🗡️ 逛武器鍛造鋪 (購買武器)\n3. 💾 儲存目前遊戲進度\n4. 🏃 離開營地繼續前進\n";
+                int shopChapter = (wave <= 3) ? 1 : (wave <= 6 ? 2 : 3);
+                cout << "1. 🛒 購買生命藥水 (💰 20 金幣)\n2. 🗡️ 逛武器鍛造鋪\n3. 🛡️ 逛防具鎧甲鋪\n4. 💾 儲存目前遊戲進度\n5. 🏃 離開營地繼續前進\n";
                 if (isControlMode) cout << "0. ⚙️ 開啟控制台 (修改數值)\n";
                 cout << "請選擇: ";
                 int shopChoice; if (!(cin >> shopChoice)) { cin.clear(); cin.ignore(1000, '\n'); continue; }
@@ -536,9 +605,10 @@ int main() {
                 if (shopChoice == 1) {
                     if (gold >= 20) { gold -= 20; potions++; cout << "🛒 購買成功！\n"; } else { cout << "❌ 金幣不足！\n"; } waitPlayer();
                 }
-                else if (shopChoice == 2) { weaponShop(player, gold); }
-                else if (shopChoice == 3) { saveGame(player, gold, potions, wave, currentSaveSlot); }
-                else if (shopChoice == 4) { inShop = false; }
+                else if (shopChoice == 2) { weaponShop(player, gold, shopChapter); }
+                else if (shopChoice == 3) { armorShop(player, gold, shopChapter); }
+                else if (shopChoice == 4) { saveGame(player, gold, potions, wave, currentSaveSlot); }
+                else if (shopChoice == 5) { inShop = false; }
                 else if (isControlMode && shopChoice == 0) { int dummy = -1; adminPanel(player, gold, potions, wave, dummy, dummy, ""); }
             }
         }
@@ -572,7 +642,8 @@ int main() {
             cout << "=================================================\n";
             cout << " 【" << player.name << "】(" << player.job << ") Lv." << player.level << "\n";
             cout << "  💖 HP: " << player.hp << "/" << player.maxHp << " | ✨ MP: " << player.mp << "/" << player.maxMp << " | 🧪 x" << potions << "\n";
-            cout << "  🗡️ 武器: " << player.weapon.name << (player.weapon.element != "無" ? " (" + player.weapon.element + "屬性)" : "") << "\n";
+            cout << "  🗡️ 武器: " << player.weapon.name << (player.weapon.element != "無" ? " (" + player.weapon.element + "屬性)" : "")
+                 << " ｜ 🛡️ 防具: " << player.armor.name << (player.armor.element != "無" ? " (" + player.armor.element + ")" : "") << "\n";
             if (pAtkBuff > 0) cout << "  [狀態] ⚔️ 攻擊提升 +" << pAtkBuff << "\n";
             if (pDefBuff > 0) cout << "  [狀態] 🛡️ 防禦提升 +" << pDefBuff << "\n";
             if (pBurnDuration > 0) cout << "  [異常] 🤢 中毒流血中 (剩餘 " << pBurnDuration << " 回合)\n";
@@ -692,11 +763,33 @@ int main() {
                     rawMonsterDam *= 2; cout << "🚨 糟糕！魔物使出了暴擊！\n";
                 }
 
-                int monsterDamage = rawMonsterDam - pDefBuff;
+                int monsterDamage = rawMonsterDam;
+                if (pDefBuff > 0) {
+                    int absorbed = min(pDefBuff, monsterDamage);
+                    monsterDamage -= absorbed;
+                    cout << "🛡️ 你的防禦抵消了 " << absorbed << " 點傷害！\n";
+                }
+                // 🌟 防具「減傷」特性
+                if (player.armor.element == "減傷" && player.armor.elemValue > 0) {
+                    int reduced = monsterDamage * player.armor.elemValue / 100;
+                    monsterDamage -= reduced;
+                    if (reduced > 0) cout << "🛡️【" << player.armor.name << "】減傷 " << player.armor.elemValue << "%，再減免了 " << reduced << " 點！\n";
+                }
                 if (monsterDamage < 1) monsterDamage = 1;
 
-                if (pDefBuff > 0) cout << "🛡️ 你的防禦抵消了 " << (rawMonsterDam - monsterDamage) << " 點傷害！\n";
-                player.takeDamage(monsterDamage);
+                bool hitLanded = player.takeDamage(monsterDamage);
+                // 🌟 防具「反傷」特性
+                if (hitLanded && player.armor.element == "反傷" && player.armor.elemValue > 0) {
+                    int reflect = monsterDamage * player.armor.elemValue / 100;
+                    if (reflect > 0) {
+                        mHp -= reflect;
+                        cout << "🌵【" << player.armor.name << "・反傷】" << mName << " 受到了 " << reflect << " 點反彈傷害！(剩餘 HP: " << (mHp < 0 ? 0 : mHp) << ")\n";
+                        if (mHp <= 0 && player.isAlive()) {
+                            cout << "\n🎉 勝利！" << mName << " 被反傷擊倒了！獲得經驗值與金幣！\n";
+                            gold += 25 + (wave * 2); waitPlayer(); break;
+                        }
+                    }
+                }
             }
 
             if (!player.isAlive()) { cout << "💀 你倒下了... 請重新讀檔再來吧！\n"; waitPlayer(); break; }
