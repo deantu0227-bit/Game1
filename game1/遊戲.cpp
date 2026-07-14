@@ -19,10 +19,10 @@ struct Equipment {
     string name; string type; int value; int subValue;
     string element; // 武器元素：火/冰/雷/毒/無
     int elemValue;  // 元素效果強度（如灼燒/中毒每回合傷害）
+    string wclass;  // 武器類型：劍/槍/匕首/法杖/弓/巨劍/鐮/萬能…（防具留空）
 };
 
 struct Skill {
-    
     string name;
     int reqLevel;
     int mpCost;
@@ -30,35 +30,44 @@ struct Skill {
     string effect;
     string attribute;
     int attrValue;
+    string reqWeapon; // 施展所需武器類型（"" 或 "任意" = 不限；絕招通常需對應武器）
+    string flavor;    // 施展時的詳細描述（絕招專用，讓演出更豐富）
 };
 
 struct JobTemplate {
     string name; string rarity;
     int hp; int atk; int mp; int regen;
     int agiBonus; int lukBonus; string desc;
+    string weaponClass; // 此職業的專屬武器類型（空 = 舊職業，尚未套用新系統）
 };
 
-// === 職業資料庫 (15 種) ===
-JobTemplate jobDB[15] = {
-    {"劍士", "N", 130, 25, 30, 6, 0, 0, "攻守平衡的基礎近戰職"},
-    {"魔法師", "N", 80, 15, 100, 15, 0, 0, "擅長高爆發的脆弱法系"},
-    {"刺客", "N", 95, 28, 40, 8, 10, 10, "基礎閃避與暴擊特化的暗殺者"},
-    {"狂戰士", "R", 200, 18, 0, 0, 0, 0, "捨棄魔力，以鮮血換取力量"},
-    {"弓箭手", "N", 100, 22, 40, 8, 5, 5, "穩定的遠程物理輸出"},
-    {"吟遊詩人", "N", 110, 20, 60, 12, 5, 0, "魔力充沛且平衡的輔助型戰士"},
-    {"武僧", "R", 140, 26, 30, 5, 15, 0, "閃避極高的肉搏大師"},
-    {"槍手", "R", 90, 30, 50, 10, 0, 15, "極致暴擊率的火槍使用者"},
-    {"聖騎士", "SR", 180, 20, 50, 8, 0, 0, "擁有神聖庇護的重裝防禦者"},
-    {"死靈法師", "SR", 90, 18, 120, 18, 0, 0, "精通黑暗魔法與吸血的法師"},
-    {"幻術師", "SR", 85, 20, 110, 15, 20, 0, "難以捉摸，極高閃避的法系"},
-    {"黑暗祭司", "SR", 120, 24, 80, 10, 0, 10, "操縱詛咒的異端神職者"},
-    {"龍騎士", "SSR", 250, 35, 60, 10, 5, 5, "完美數值！攻防一體的傳說存在"},
-    {"魔劍士", "SSR", 160, 32, 90, 15, 10, 10, "物理與魔法雙修的無敵劍客"},
-    {"創造神", "EX", 9999, 999, 999, 99, 50, 50, "【上帝模式專屬】無視一切規則的造物主"}
+// === 職業資料庫 (15 舊職 + 3 新職試作 = 18 種) ===
+JobTemplate jobDB[18] = {
+    {"劍士", "N", 130, 25, 30, 6, 0, 0, "攻守平衡的基礎近戰職", ""},
+    {"魔法師", "N", 80, 15, 100, 15, 0, 0, "擅長高爆發的脆弱法系", ""},
+    {"刺客", "N", 95, 28, 40, 8, 10, 10, "基礎閃避與暴擊特化的暗殺者", ""},
+    {"狂戰士", "R", 200, 18, 0, 0, 0, 0, "捨棄魔力，以鮮血換取力量", ""},
+    {"弓箭手", "N", 100, 22, 40, 8, 5, 5, "穩定的遠程物理輸出", ""},
+    {"吟遊詩人", "N", 110, 20, 60, 12, 5, 0, "魔力充沛且平衡的輔助型戰士", ""},
+    {"武僧", "R", 140, 26, 30, 5, 15, 0, "閃避極高的肉搏大師", ""},
+    {"槍手", "R", 90, 30, 50, 10, 0, 15, "極致暴擊率的火槍使用者", ""},
+    {"聖騎士", "SR", 180, 20, 50, 8, 0, 0, "擁有神聖庇護的重裝防禦者", ""},
+    {"死靈法師", "SR", 90, 18, 120, 18, 0, 0, "精通黑暗魔法與吸血的法師", ""},
+    {"幻術師", "SR", 85, 20, 110, 15, 20, 0, "難以捉摸，極高閃避的法系", ""},
+    {"黑暗祭司", "SR", 120, 24, 80, 10, 0, 10, "操縱詛咒的異端神職者", ""},
+    {"龍騎士", "SSR", 250, 35, 60, 10, 5, 5, "完美數值！攻防一體的傳說存在", ""},
+    {"魔劍士", "SSR", 160, 32, 90, 15, 10, 10, "物理與魔法雙修的無敵劍客", ""},
+    {"創造神", "EX", 9999, 999, 999, 99, 50, 50, "【上帝模式專屬】無視一切規則的造物主", "萬能"},
+    // === 新職業試作（8 技能 + 2 絕招，絕招需對應武器）===
+    {"天劍聖", "SSR", 190, 34, 70, 10, 5, 5, "【新】掌握十道劍技的近戰劍聖，絕招需持【劍】", "劍"},
+    {"破軍槍神", "SSR", 150, 33, 55, 9, 5, 20, "【新】極致暴擊的槍術宗師，絕招需持【槍】", "槍"},
+    {"影襲刺客", "SR", 120, 30, 50, 8, 20, 15, "【新】高閃避高暴擊的暗影殺手，絕招需持【匕首】", "匕首"}
 };
+const int JOB_COUNT = 18;
+int getSkillCount(int jIdx) { return (jIdx >= 15 && jIdx <= 17) ? 10 : 3; } // 新職 10 技能，舊職 3
 
 int getJobIndex(string jName) {
-    for (int i = 0; i < 15; i++) {
+    for (int i = 0; i < JOB_COUNT; i++) {
         if (jobDB[i].name == jName) return i;
     }
     return 0;
@@ -74,15 +83,15 @@ public:
     int mp; int maxMp; int mpRegen;
     int strength; int constitution; int agility; int lucky;
     int dodgeChance; int critChance;
-    int skillLevel[3]; // 目前職業三個技能的等級（Lv.1 起，每級傷害倍率 +0.3）
+    int skillLevel[10]; // 目前職業各技能的等級（Lv.1 起，每級傷害倍率 +0.3；新職最多 10 個）
     Equipment weapon; Equipment armor;
 
     Character(string n, string j, int h, int a, int m, int r) {
         name = n; job = j; level = 1; exp = 0; maxExp = 100; statPoints = 0;
         baseHp = h; baseAtk = a; strength = 0; constitution = 0; agility = 0; lucky = 0;
-        skillLevel[0] = 1; skillLevel[1] = 1; skillLevel[2] = 1;
-        weapon = { "新手舊劍", "Weapon", 0, 5, "無", 0 };
-        armor = { "破舊布衣", "Armor", 0, 5, "無", 0 };
+        for (int i = 0; i < 10; i++) skillLevel[i] = 1;
+        weapon = { "新手舊劍", "Weapon", 0, 5, "無", 0, "劍" };
+        armor = { "破舊布衣", "Armor", 0, 5, "無", 0, "" };
         updateStats();
         hp = maxHp; mp = m; maxMp = m; mpRegen = r;
     }
@@ -169,8 +178,9 @@ void saveGame(Character& p, int gold, int potions, int wave, int slot) {
             << p.weapon.name << "\n" << p.weapon.value << "\n" << p.weapon.subValue << "\n"
             << p.armor.name << "\n" << p.armor.value << "\n" << p.armor.subValue << "\n"
             << p.weapon.element << "\n" << p.weapon.elemValue << "\n"
-            << p.armor.element << "\n" << p.armor.elemValue << "\n"
-            << p.skillLevel[0] << "\n" << p.skillLevel[1] << "\n" << p.skillLevel[2] << "\n";
+            << p.armor.element << "\n" << p.armor.elemValue << "\n";
+    for (int i = 0; i < 10; i++) outFile << p.skillLevel[i] << "\n";
+    outFile << (p.weapon.wclass.empty() ? "無" : p.weapon.wclass) << "\n";
     outFile.close();
     cout << "💾 【系統提示】進度已成功儲存至 檔號 " << slot << "！\n";
     waitPlayer();
@@ -192,15 +202,17 @@ vector<int> rollStock(ShopItem pool[], int poolSize, int chapter, int maxOffer) 
 // 🌟 武器商店：販售帶有元素屬性的武器（隨章節變強、每次進貨隨機）
 void weaponShop(Character& p, int& gold, int chapter) {
     ShopItem pool[] = {
-        { {"精鋼劍",   "Weapon", 15, 3,  "無", 0 },  80,   1 },
-        { {"淬毒匕首", "Weapon", 25, 8,  "毒", 12 }, 250,  1 },
-        { {"烈焰長劍", "Weapon", 30, 5,  "火", 15 }, 320,  1 },
-        { {"寒冰之刃", "Weapon", 45, 6,  "冰", 0 },  420,  2 },
-        { {"雷神之槍", "Weapon", 55, 7,  "雷", 0 },  520,  2 },
-        { {"獄炎巨劍", "Weapon", 60, 5,  "火", 30 }, 560,  2 },
-        { {"秘銀聖劍", "Weapon", 85, 10, "無", 0 },  720,  3 },
-        { {"死亡鐮刀", "Weapon", 95, 8,  "毒", 40 }, 850,  3 },
-        { {"雷霆審判", "Weapon", 110,10, "雷", 0 },  1050, 3 }
+        { {"精鋼劍",   "Weapon", 15, 3,  "無", 0,  "劍" },   80,   1 },
+        { {"淬毒匕首", "Weapon", 25, 8,  "毒", 12, "匕首" }, 250,  1 },
+        { {"烈焰長劍", "Weapon", 30, 5,  "火", 15, "劍" },   320,  1 },
+        { {"寒冰之刃", "Weapon", 45, 6,  "冰", 0,  "劍" },   420,  2 },
+        { {"雷神之槍", "Weapon", 55, 7,  "雷", 0,  "槍" },   520,  2 },
+        { {"獄炎巨劍", "Weapon", 60, 5,  "火", 30, "巨劍" }, 560,  2 },
+        { {"秘銀聖劍", "Weapon", 85, 10, "無", 0,  "劍" },   720,  3 },
+        { {"死亡鐮刀", "Weapon", 95, 8,  "毒", 40, "鐮" },   850,  3 },
+        { {"雷霆審判", "Weapon", 110,10, "雷", 0,  "槍" },   1050, 3 },
+        { {"疾影短刀", "Weapon", 40, 12, "無", 0,  "匕首" }, 380,  2 },
+        { {"破軍龍槍", "Weapon", 100,9,  "雷", 0,  "槍" },   980,  3 }
     };
     int poolSize = sizeof(pool) / sizeof(pool[0]);
     vector<int> offer = rollStock(pool, poolSize, chapter, 4); // 進店時決定本次庫存
@@ -210,12 +222,12 @@ void weaponShop(Character& p, int& gold, int chapter) {
         clearScreen();
         cout << "=================================\n         🗡️ 武器鍛造鋪         \n=================================\n";
         cout << " 金幣: ✨ " << gold << "  (第 " << chapter << " 章精選 " << offerCount << " 件)\n";
-        cout << " 目前武器: 【" << p.weapon.name << "】 攻+" << p.weapon.value
+        cout << " 目前武器: 【" << p.weapon.name << "】(類型:" << (p.weapon.wclass.empty() ? "無" : p.weapon.wclass) << ") 攻+" << p.weapon.value
              << " 暴+" << p.weapon.subValue << " 屬性:" << p.weapon.element << "\n";
         cout << "---------------------------------\n";
         for (int i = 0; i < offerCount; i++) {
             Equipment& e = pool[offer[i]].eq;
-            cout << " [" << (i + 1) << "] " << e.name << " ｜ 攻+" << e.value << " 暴+" << e.subValue;
+            cout << " [" << (i + 1) << "] " << e.name << " ｜ [" << e.wclass << "] 攻+" << e.value << " 暴+" << e.subValue;
             if (e.element != "無") {
                 cout << " ｜ " << e.element << "屬性";
                 if (e.elemValue > 0) cout << "(每回合 " << e.elemValue << ")";
@@ -223,7 +235,7 @@ void weaponShop(Character& p, int& gold, int chapter) {
             cout << " ｜ 💰" << pool[offer[i]].price << "\n";
         }
         cout << " [0] 🏃 離開武器店\n---------------------------------\n";
-        cout << " 說明：火/毒→持續傷害，雷/冰→機率使敵人麻痺\n";
+        cout << " 說明：武器類型決定能否施展職業絕招；火/毒→持續傷害，雷/冰→機率麻痺\n";
         cout << "請選擇 (0-" << offerCount << "): ";
         int c; if (!(cin >> c)) { cin.clear(); cin.ignore(1000, '\n'); continue; }
         cin.ignore(1000, '\n');
@@ -290,7 +302,7 @@ void armorShop(Character& p, int& gold, int chapter) {
 
 // 🌟 開發者控制台函式
 // 🌟 開發者控制台函式 (已擴充等級與職業修改)
-void adminPanel(Character& p, int& gold, int& potions, int& wave, int& mHp, int& mAtk, string mName, Skill skillDB[][3]) {
+void adminPanel(Character& p, int& gold, int& potions, int& wave, int& mHp, int& mAtk, string mName, Skill skillDB[][10]) {
     while (true) {
         clearScreen();
         int jIdx = getJobIndex(p.job); // 隨時對應目前職業的技能
@@ -306,8 +318,7 @@ void adminPanel(Character& p, int& gold, int& potions, int& wave, int& mHp, int&
         }
         cout << " [8] 修改角色等級 (目前: Lv." << p.level << ")\n";
         cout << " [9] 修改角色職業 (目前: " << p.job << ")\n";
-        cout << " [10] 升級技能 (技能等級: "
-             << p.skillLevel[0] << "/" << p.skillLevel[1] << "/" << p.skillLevel[2] << ")\n";
+        cout << " [10] 升級技能 (共 " << getSkillCount(jIdx) << " 個技能可強化)\n";
         cout << " [0] ↩️ 返回遊戲\n=========================================\n請選擇要修改的項目 (0-10): ";
 
         int choice; if (!(cin >> choice)) { cin.clear(); cin.ignore(1000, '\n'); continue; }
@@ -316,16 +327,17 @@ void adminPanel(Character& p, int& gold, int& potions, int& wave, int& mHp, int&
 
         // 如果選擇修改職業，印出職業參照表
         if (choice == 9) {
-            cout << "👉 職業參照表：\n  0:劍士, 1:魔法師, 2:刺客, 3:狂戰士, 4:弓箭手\n  5:吟遊詩人, 6:武僧, 7:槍手, 8:聖騎士, 9:死靈法師\n  10:幻術師, 11:黑暗祭司, 12:龍騎士, 13:魔劍士, 14:創造神\n";
-            cout << "👉 請輸入新的職業編號 (0-14): ";
+            cout << "👉 職業參照表：\n  0:劍士, 1:魔法師, 2:刺客, 3:狂戰士, 4:弓箭手\n  5:吟遊詩人, 6:武僧, 7:槍手, 8:聖騎士, 9:死靈法師\n  10:幻術師, 11:黑暗祭司, 12:龍騎士, 13:魔劍士, 14:創造神\n  15:天劍聖(劍), 16:破軍槍神(槍), 17:影襲刺客(匕首) ← 新職\n";
+            cout << "👉 請輸入新的職業編號 (0-17): ";
         }
         else if (choice == 10) {
+            int sc = getSkillCount(jIdx);
             cout << "👉 目前【" << p.job << "】的技能：\n";
-            for (int i = 0; i < 3; i++)
-                cout << "  [" << (i + 1) << "] " << skillDB[jIdx][i].name
+            for (int i = 0; i < sc; i++)
+                cout << "  [" << (i + 1) << "] " << (i >= 8 ? "🌟" : "") << skillDB[jIdx][i].name
                      << " (Lv." << p.skillLevel[i] << "，倍率 "
                      << (skillDB[jIdx][i].damageMult + (p.skillLevel[i] - 1) * 0.3) << ")\n";
-            cout << "👉 請輸入要升級的技能編號 (1-3): ";
+            cout << "👉 請輸入要升級的技能編號 (1-" << sc << "): ";
         }
         else cout << "👉 請輸入新的數值: ";
 
@@ -345,16 +357,17 @@ void adminPanel(Character& p, int& gold, int& potions, int& wave, int& mHp, int&
             cout << "✅ 修改成功！目前等級已設定為 Lv." << p.level << "\n";
         }
         else if (choice == 9) {
-            if (newVal >= 0 && newVal <= 14) {
+            if (newVal >= 0 && newVal <= 17) {
                 p.job = jobDB[newVal].name;
-                p.skillLevel[0] = 1; p.skillLevel[1] = 1; p.skillLevel[2] = 1; // 新職業技能重置
+                for (int i = 0; i < 10; i++) p.skillLevel[i] = 1; // 新職業技能重置
+                if (!jobDB[newVal].weaponClass.empty()) p.weapon.wclass = jobDB[newVal].weaponClass; // 對應武器類型，方便施展絕招
                 cout << "✅ 修改成功！職業已切換為【" << p.job << "】，技能已對應更新。\n";
             } else {
                 cout << "❌ 無效的職業編號！\n";
             }
         }
         else if (choice == 10) {
-            if (newVal >= 1 && newVal <= 3) {
+            if (newVal >= 1 && newVal <= getSkillCount(jIdx)) {
                 p.skillLevel[newVal - 1]++;
                 cout << "✅ 技能【" << skillDB[jIdx][newVal - 1].name << "】提升至 Lv."
                      << p.skillLevel[newVal - 1] << "！\n";
@@ -367,7 +380,7 @@ void adminPanel(Character& p, int& gold, int& potions, int& wave, int& mHp, int&
 }
 
 // 🌟 技能資料庫初始化
-void initAllSkills(Skill db[15][3]) {
+void initAllSkills(Skill db[][10]) {
     db[0][0] = {"強擊斬", 1, 10, 1.5, "造成 1.5 倍傷害", "NONE", 0};
     db[0][1] = {"聖光重擊", 3, 18, 2.0, "傷害並提升本次戰鬥防禦", "BUFF_DEF", 10};
     db[0][2] = {"諸神防壁斬", 5, 25, 3.5, "3.5倍爆發，大幅提升防禦", "BUFF_DEF", 25};
@@ -427,13 +440,55 @@ void initAllSkills(Skill db[15][3]) {
     db[14][0] = {"神之指", 1, 0, 10.0, "輕輕一指，灰飛煙滅", "STUN", 1};
     db[14][1] = {"神之恩典", 1, 0, 5.0, "造成傷害並完全治癒自身", "HEAL", 9999};
     db[14][2] = {"世界覆寫", 1, 0, 99.0, "直接抹除魔物的存在", "NONE", 0};
+
+    // === 新職業 15 天劍聖（劍）：8 技能 + 2 絕招 ===
+    db[15][0] = {"斬鐵", 1, 8, 1.4, "基礎劍技", "NONE", 0, "任意", ""};
+    db[15][1] = {"破甲刺", 2, 12, 1.7, "穿刺並使敵暈眩", "STUN", 1, "任意", ""};
+    db[15][2] = {"烈風連斬", 3, 16, 2.0, "多段劍風", "NONE", 0, "任意", ""};
+    db[15][3] = {"聖光斬", 4, 20, 2.3, "聖光傷害並提升防禦", "BUFF_DEF", 12, "任意", ""};
+    db[15][4] = {"劍氣衝擊", 5, 24, 2.6, "遠程劍氣使敵暈眩", "STUN", 1, "任意", ""};
+    db[15][5] = {"連環劍舞", 7, 28, 3.0, "劍舞連擊提升攻擊", "BUFF_ATK", 15, "任意", ""};
+    db[15][6] = {"心眼一閃", 9, 32, 3.6, "看破弱點的一擊", "NONE", 0, "任意", ""};
+    db[15][7] = {"劍神結界", 11, 36, 3.2, "劍氣結界大幅提升防禦", "BUFF_DEF", 30, "任意", ""};
+    db[15][8] = {"【絕】天照一閃", 12, 45, 5.5, "凝聚全身劍意的一閃", "NONE", 0, "劍",
+        "你闔眼凝神，將畢生劍意灌注於刃尖——\n睜眼的剎那，一道縱貫天地的白光已然斬出，\n【天照一閃】撕裂空間，萬物在光中歸於寂靜！"};
+    db[15][9] = {"【絕】諸神黃昏劍", 18, 60, 7.0, "召喚幻影劍雨的終極奧義", "BURN", 30, "劍",
+        "天空崩裂，無數發光的幻影巨劍自虛空降臨，\n每一柄都承載著隕落諸神的怒火。\n你揮下手中之劍——【諸神黃昏】傾瀉而下，\n以毀天滅地之勢將敵人埋葬於劍雨之中！"};
+
+    // === 新職業 16 破軍槍神（槍）：8 技能 + 2 絕招 ===
+    db[16][0] = {"刺擊", 1, 8, 1.5, "快速突刺", "NONE", 0, "任意", ""};
+    db[16][1] = {"迴旋槍", 2, 12, 1.8, "橫掃一圈", "NONE", 0, "任意", ""};
+    db[16][2] = {"貫穿刺", 3, 16, 2.2, "無視部分防禦的直刺", "NONE", 0, "任意", ""};
+    db[16][3] = {"風雷突", 4, 20, 2.4, "雷光突刺使敵麻痺", "STUN", 1, "任意", ""};
+    db[16][4] = {"亂舞連刺", 5, 24, 2.7, "疾風般的連續突刺", "NONE", 0, "任意", ""};
+    db[16][5] = {"戰意昂揚", 7, 26, 1.5, "鼓舞自身大幅提升攻擊", "BUFF_ATK", 18, "任意", ""};
+    db[16][6] = {"破空刺", 9, 30, 3.4, "撕裂空氣的高速一擊", "NONE", 0, "任意", ""};
+    db[16][7] = {"龍捲槍陣", 11, 34, 3.0, "旋風護體提升防禦", "BUFF_DEF", 25, "任意", ""};
+    db[16][8] = {"【絕】流星破軍", 12, 48, 5.8, "化作流星的貫穿突刺", "STUN", 1, "槍",
+        "你俯身壓低槍尖，全身氣勢如即將墜落的流星。\n大地在腳下崩裂，你化作一道赤紅光芒暴衝而出——\n【流星破軍】洞穿一切阻擋，餘勢所及，天地為之震顫！"};
+    db[16][9] = {"【絕】萬槍天穹", 18, 62, 7.2, "召喚槍陣覆蓋戰場", "BURN", 35, "槍",
+        "你將長槍高舉向天，向沉睡的戰神祈願。\n剎那間，成千上萬柄星光鑄成的長槍浮現於天穹，\n隨你手臂揮落——【萬槍天穹】如暴雨傾盆而下，\n將敵人連同其立足之地一併貫穿、焚盡！"};
+
+    // === 新職業 17 影襲刺客（匕首）：8 技能 + 2 絕招 ===
+    db[17][0] = {"背刺", 1, 8, 1.6, "從陰影突襲", "NONE", 0, "任意", ""};
+    db[17][1] = {"淬毒割喉", 2, 12, 1.7, "附加中毒流血", "BURN", 10, "任意", ""};
+    db[17][2] = {"影分身", 3, 16, 2.0, "殘影擾敵使其麻痺", "STUN", 1, "任意", ""};
+    db[17][3] = {"致命連刺", 4, 20, 2.4, "快速連刺", "NONE", 0, "任意", ""};
+    db[17][4] = {"煙霧彈", 5, 18, 1.5, "煙霧掩護提升防禦", "BUFF_DEF", 15, "任意", ""};
+    db[17][5] = {"劇毒塗層", 7, 22, 1.8, "強化毒素持續傷害", "BURN", 22, "任意", ""};
+    db[17][6] = {"暗殺步法", 9, 26, 2.0, "進入殺意狀態提升攻擊", "BUFF_ATK", 20, "任意", ""};
+    db[17][7] = {"七星奪魂", 11, 32, 3.5, "連續七擊要害", "NONE", 0, "任意", ""};
+    db[17][8] = {"【絕】影殺·歿", 12, 44, 5.6, "瞬間消失後的必殺一擊", "NONE", 0, "匕首",
+        "你的身影驟然融入陰影，氣息徹底消失。\n敵人驚惶四顧的瞬間，冰冷的匕首已抵住其要害——\n【影殺·歿】無聲無息，等對手察覺時，\n致命的一刀早已沒入心臟，鮮血染紅了黑夜。"};
+    db[17][9] = {"【絕】千影亂舞葬", 18, 58, 6.8, "無數殘影同時斬擊", "BURN", 30, "匕首",
+        "你踏出詭異步法，身形化作十、化作百道殘影，\n每一道殘影都握著淬毒匕首自不同角度撲擊。\n【千影亂舞葬】——敵人被困於刀影牢籠之中，\n千百道致命傷同時綻放，連慘叫都來不及發出！"};
 }
 
 int rollGachaJob() {
     int roll = rand() % 100;
     vector<int> pool;
-    if (roll < 3) { pool = {12, 13}; cout << "\n🌟🌟🌟 金光閃爍！獲得 SSR 職業！\n"; }
-    else if (roll < 18) { pool = {8, 9, 10, 11}; cout << "\n✨ 紫光綻放！獲得 SR 職業！\n"; }
+    if (roll < 3) { pool = {12, 13, 15, 16}; cout << "\n🌟🌟🌟 金光閃爍！獲得 SSR 職業！\n"; }
+    else if (roll < 18) { pool = {8, 9, 10, 11, 17}; cout << "\n✨ 紫光綻放！獲得 SR 職業！\n"; }
     else if (roll < 48) { pool = {3, 6, 7}; cout << "\n🔵 藍光一閃！獲得 R 職業！\n"; }
     else { pool = {0, 1, 2, 4, 5}; cout << "\n⚪ 命運的輪盤停止，獲得 N 職業。\n"; }
     return pool[rand() % pool.size()];
@@ -450,7 +505,7 @@ int main() {
     string ch2Monsters[] = {"幽靈骷髏", "怨恨殭屍", "詛咒石像鬼", "地底岩魔", "吸血蝙蝠群", "黑暗騎士"};
     string ch3Monsters[] = {"憤怒的半人馬", "墮落巨魔", "地獄雙頭犬", "深淵惡魔", "烈焰魅魔", "死亡使者"};
 
-    Skill skillDatabase[15][3];
+    Skill skillDatabase[18][10];
     initAllSkills(skillDatabase);
 
     string playerName;
@@ -511,11 +566,15 @@ int main() {
             cout << "一般魔物："; for(auto m : ch3Monsters) cout << m << " | "; cout << "\n鎮區守衛：🐉 遠古滅世巨龍\n\n";
 
             cout << "-----------------------------------------------------\n";
-            cout << "【職業圖鑑】(全 14 職 + 1 隱藏職)\n";
+            cout << "【職業圖鑑】(14 職 + 3 新職 + 1 隱藏職)\n";
             for(int i=0; i<14; i++) {
                 cout << " [" << jobDB[i].rarity << "] " << jobDB[i].name << " : " << jobDB[i].desc << "\n";
             }
             cout << " [EX] ??? : 傳說中掌握世界代碼的造物主...\n";
+            cout << " -- 🆕 新職業（每職 8 技能 + 2 絕招，絕招需對應武器）--\n";
+            for(int i=15; i<18; i++) {
+                cout << " [" << jobDB[i].rarity << "] " << jobDB[i].name << " (專武:" << jobDB[i].weaponClass << ") : " << jobDB[i].desc << "\n";
+            }
             waitPlayer(); continue;
         }
         else if (menuChoice == 2) {
@@ -540,10 +599,13 @@ int main() {
                 inFile.ignore();
                 getline(inFile, player.weapon.name); inFile >> player.weapon.value >> player.weapon.subValue; inFile.ignore();
                 getline(inFile, player.armor.name); inFile >> player.armor.value >> player.armor.subValue;
-                // 武器/防具元素（舊存檔沒有這些欄，讀取失敗時保持預設「無」）
+                // 武器/防具元素、技能等級、武器類型（舊存檔沒有這些欄，讀取失敗時保持預設）
                 player.weapon.element = "無"; player.weapon.elemValue = 0;
                 player.armor.element = "無"; player.armor.elemValue = 0;
-                player.skillLevel[0] = 1; player.skillLevel[1] = 1; player.skillLevel[2] = 1;
+                for (int i = 0; i < 10; i++) player.skillLevel[i] = 1;
+                // 依職業預設武器類型（舊檔沒存 wclass 時的合理值）
+                player.weapon.wclass = jobDB[getJobIndex(player.job)].weaponClass;
+                if (player.weapon.wclass.empty()) player.weapon.wclass = "劍";
                 inFile.ignore();
                 if (getline(inFile, player.weapon.element)) {
                     if (player.weapon.element.empty()) player.weapon.element = "無";
@@ -551,7 +613,9 @@ int main() {
                     if (getline(inFile, player.armor.element)) {
                         if (player.armor.element.empty()) player.armor.element = "無";
                         inFile >> player.armor.elemValue;
-                        inFile >> player.skillLevel[0] >> player.skillLevel[1] >> player.skillLevel[2];
+                        for (int i = 0; i < 10; i++) if (!(inFile >> player.skillLevel[i])) break;
+                        inFile.ignore();
+                        string wc; if (getline(inFile, wc) && !wc.empty() && wc != "無") player.weapon.wclass = wc;
                     }
                 }
                 inFile.close();
@@ -591,10 +655,14 @@ int main() {
                 clearScreen();
                 cout << "=========================================\n        🌟 選擇或抽取你的傳奇職業 🌟         \n=========================================\n";
                 cout << " [ 1 ] 🛡️ 劍士   (基礎)\n [ 2 ] 🔮 魔法師 (基礎)\n [ 3 ] 🏹 刺客   (基礎)\n";
-                cout << " [ 4 ] 🎲 命運抽卡 (抽取隨機職業，含稀有 SSR 隱藏職業！)\n=========================================\n請選擇 (1-4): ";
+                cout << " [ 4 ] 🎲 命運抽卡 (抽取隨機職業，含稀有 SSR 隱藏職業！)\n";
+                cout << " -- 🆕 新職業試作（8 技能 + 2 絕招）--\n";
+                cout << " [ 5 ] ⚔️ 天劍聖   (劍/SSR)\n [ 6 ] 🔱 破軍槍神 (槍/SSR)\n [ 7 ] 🗡️ 影襲刺客 (匕首/SR)\n";
+                cout << "=========================================\n請選擇 (1-7): ";
                 int jobChoice; if (!(cin >> jobChoice)) { cin.clear(); cin.ignore(1000, '\n'); continue; }
                 cin.ignore(1000, '\n');
                 if (jobChoice >= 1 && jobChoice <= 3) { selectedJobIdx = jobChoice - 1; break; }
+                else if (jobChoice >= 5 && jobChoice <= 7) { selectedJobIdx = 15 + (jobChoice - 5); break; }
                 else if (jobChoice == 4) {
                     selectedJobIdx = rollGachaJob();
                     cout << " 🎉 恭喜！你抽中了【" << jobDB[selectedJobIdx].rarity << "】級職業：「" << jobDB[selectedJobIdx].name << "」！\n";
@@ -607,10 +675,15 @@ int main() {
         JobTemplate jt = jobDB[selectedJobIdx];
         player = Character(playerName, jt.name, jt.hp, jt.atk, jt.mp, jt.regen);
         player.agility += jt.agiBonus; player.lucky += jt.lukBonus;
+        // 新職業：起始武器改為對應類型，方便施展絕招
+        if (!jt.weaponClass.empty() && selectedJobIdx != 14) {
+            player.weapon.wclass = jt.weaponClass;
+            player.weapon.name = "見習" + jt.weaponClass;
+        }
 
         if (selectedJobIdx == 14) {
-            player.weapon = {"造物主的指令", "Weapon", 500, 100, "雷", 999};
-            player.armor = {"系統防火牆", "Armor", 5000, 100, "無", 0};
+            player.weapon = {"造物主的指令", "Weapon", 500, 100, "雷", 999, "萬能"};
+            player.armor = {"系統防火牆", "Armor", 5000, 100, "無", 0, ""};
         }
         player.updateStats(); player.hp = player.maxHp;
 
@@ -689,7 +762,7 @@ int main() {
             cout << "=================================================\n";
             cout << " 【" << player.name << "】(" << player.job << ") Lv." << player.level << "\n";
             cout << "  💖 HP: " << player.hp << "/" << player.maxHp << " | ✨ MP: " << player.mp << "/" << player.maxMp << " | 🧪 x" << potions << "\n";
-            cout << "  🗡️ 武器: " << player.weapon.name << (player.weapon.element != "無" ? " (" + player.weapon.element + "屬性)" : "")
+            cout << "  🗡️ 武器: " << player.weapon.name << (player.weapon.wclass.empty() ? "" : "[" + player.weapon.wclass + "]") << (player.weapon.element != "無" ? "(" + player.weapon.element + "屬性)" : "")
                  << " ｜ 🛡️ 防具: " << player.armor.name << (player.armor.element != "無" ? " (" + player.armor.element + ")" : "") << "\n";
             if (pAtkBuff > 0) cout << "  [狀態] ⚔️ 攻擊提升 +" << pAtkBuff << "\n";
             if (pDefBuff > 0) cout << "  [狀態] 🛡️ 防禦提升 +" << pDefBuff << "\n";
@@ -743,24 +816,37 @@ int main() {
                 tookAction = true;
             } else if (choice == 2) {
                 cout << "\n========== ⚔️ 你的回合 ==========\n";
-                for (int i=0; i<3; i++) {
+                int skCount = getSkillCount(jobIndex);
+                for (int i=0; i<skCount; i++) {
                     Skill sk = skillDatabase[jobIndex][i];
+                    bool isUlt = (i >= 8); // 第 9、10 個為絕招
                     if (player.job == "創造神" || player.level >= sk.reqLevel) {
-                        cout << "[" << i+1 << "] " << sk.name << " (技能 Lv." << player.skillLevel[i]
-                             << " 耗魔:" << sk.mpCost << ") " << sk.effect << "\n";
+                        cout << "[" << i+1 << "] " << (isUlt ? "🌟" : "") << sk.name
+                             << " (Lv." << player.skillLevel[i] << " 耗魔:" << sk.mpCost << ") " << sk.effect;
+                        if (isUlt && sk.reqWeapon != "任意" && !sk.reqWeapon.empty()) cout << " ⟪需" << sk.reqWeapon << "⟫";
+                        cout << "\n";
                     } else cout << "[" << i+1 << "] ??? (Lv." << sk.reqLevel << " 解鎖)\n";
                 }
-                cout << "選擇技能 (1-3): "; int skChoice; if (!(cin >> skChoice)) { cin.clear(); cin.ignore(1000, '\n'); continue; }
+                cout << "選擇技能 (1-" << skCount << "): "; int skChoice; if (!(cin >> skChoice)) { cin.clear(); cin.ignore(1000, '\n'); continue; }
                 cin.ignore(1000, '\n'); // 清掉殘留換行
-                if (skChoice >= 1 && skChoice <= 3) {
+                if (skChoice >= 1 && skChoice <= skCount) {
                     Skill sk = skillDatabase[jobIndex][skChoice-1];
+                    bool isUlt = (skChoice-1 >= 8);
+                    bool weaponOk = (sk.reqWeapon.empty() || sk.reqWeapon == "任意"
+                                     || player.weapon.wclass == sk.reqWeapon || player.weapon.wclass == "萬能");
                     if (player.level < sk.reqLevel && player.job != "創造神") cout << "❌ 等級不足，尚未領悟此技能！\n";
+                    else if (!weaponOk) cout << "❌ 絕招【" << sk.name << "】需裝備【" << sk.reqWeapon << "】類武器才能施展！(目前武器類型：" << (player.weapon.wclass.empty() ? "無" : player.weapon.wclass) << ")\n";
                     else if (player.mp >= sk.mpCost) {
                         player.mp -= sk.mpCost;
                         double effMult = sk.damageMult + (player.skillLevel[skChoice-1] - 1) * 0.3; // 技能等級加成
                         finalDamage = (player.atk + pAtkBuff) * effMult;
                         if (player.job == "刺客" && skChoice >= 2) finalDamage *= 2;
-                        cout << "\n🌟 使出絕招【" << sk.name << "】(技能 Lv." << player.skillLevel[skChoice-1] << ")！\n";
+                        if (isUlt && !sk.flavor.empty()) {
+                            cout << "\n✨✨✨ 絕招發動！ ✨✨✨\n" << sk.flavor << "\n";
+                            cout << "──【" << sk.name << "】(絕招 Lv." << player.skillLevel[skChoice-1] << ")──\n";
+                        } else {
+                            cout << "\n🌟 使出絕招【" << sk.name << "】(技能 Lv." << player.skillLevel[skChoice-1] << ")！\n";
+                        }
                         if (sk.attribute == "BURN") { mBurnDamage = sk.attrValue; mBurnDuration = 3; cout << " ➥ 附加：施加了烈焰/劇毒！\n"; }
                         else if (sk.attribute == "STUN") { mStunned = true; cout << " ➥ 附加：強大的衝擊讓魔物暈眩了！\n"; }
                         else if (sk.attribute == "HEAL") { player.hp = min(player.maxHp, player.hp + sk.attrValue); cout << " ➥ 附加：治癒了自身 " << sk.attrValue << " 點生命！\n"; }
