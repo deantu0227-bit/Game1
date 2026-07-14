@@ -5,3 +5,6 @@
 
 # Runtime save files
 rpg_save_slot*.txt
+
+# 獨立的知識庫 repo（有自己的 remote，勿併入 Game1）
+DeanKM/
