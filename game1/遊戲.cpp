@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <fstream>
 #include <vector>
+#include <map>
+#include <sstream>
 #ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -543,6 +545,125 @@ void initAllSkills(Skill db[][10]) {
         "你的身影驟然融入陰影，氣息徹底消失。\n敵人驚惶四顧的瞬間，冰冷的匕首已抵住其要害——\n【影殺·歿】無聲無息，等對手察覺時，\n致命的一刀早已沒入心臟，鮮血染紅了黑夜。"};
 }
 
+// ===== 技能資料驅動化：JSON 讀寫（可編輯 skills.json 而不需改程式碼）=====
+static string jsonEscape(const string& s) {
+    string o;
+    for (char c : s) {
+        if (c == '\\') o += "\\\\";
+        else if (c == '"') o += "\\\"";
+        else if (c == '\n') o += "\\n";
+        else if (c == '\t') o += "\\t";
+        else if (c == '\r') { /* 略過 */ }
+        else o += c;
+    }
+    return o;
+}
+// 解析 JSON 字串（處理 \n \t \" \\ 轉義）；i 指向開頭的 " ，結束後 i 指向結尾 " 的下一個
+static string parseJsonString(const string& s, size_t& i) {
+    string out; i++; // 跳過開頭 "
+    while (i < s.size() && s[i] != '"') {
+        if (s[i] == '\\' && i + 1 < s.size()) {
+            char n = s[i + 1];
+            if (n == 'n') out += '\n'; else if (n == 't') out += '\t';
+            else if (n == '"') out += '"'; else if (n == '\\') out += '\\';
+            else if (n == '/') out += '/'; else out += n;
+            i += 2;
+        } else { out += s[i]; i++; }
+    }
+    if (i < s.size()) i++; // 跳過結尾 "
+    return out;
+}
+// 解析「扁平物件的陣列」，每個物件轉成 map<鍵,值字串>
+static vector<map<string,string>> parseJsonArray(const string& s) {
+    vector<map<string,string>> result;
+    size_t i = 0;
+    while (i < s.size() && s[i] != '[') i++;
+    if (i < s.size()) i++;
+    while (i < s.size()) {
+        while (i < s.size() && (s[i]==' '||s[i]=='\n'||s[i]=='\r'||s[i]=='\t'||s[i]==',')) i++;
+        if (i >= s.size() || s[i] == ']') break;
+        if (s[i] != '{') { i++; continue; }
+        i++;
+        map<string,string> obj;
+        while (i < s.size() && s[i] != '}') {
+            while (i < s.size() && (s[i]==' '||s[i]=='\n'||s[i]=='\r'||s[i]=='\t'||s[i]==',')) i++;
+            if (i >= s.size() || s[i] == '}') break;
+            if (s[i] != '"') { i++; continue; }
+            string key = parseJsonString(s, i);
+            while (i < s.size() && (s[i]==' '||s[i]==':'||s[i]=='\n'||s[i]=='\r'||s[i]=='\t')) i++;
+            string val;
+            if (i < s.size() && s[i] == '"') val = parseJsonString(s, i);
+            else {
+                size_t st = i;
+                while (i < s.size() && s[i] != ',' && s[i] != '}') i++;
+                val = s.substr(st, i - st);
+                while (!val.empty() && (val.back()==' '||val.back()=='\n'||val.back()=='\r'||val.back()=='\t')) val.pop_back();
+            }
+            obj[key] = val;
+        }
+        if (i < s.size()) i++;
+        result.push_back(obj);
+    }
+    return result;
+}
+static int jInt(map<string,string>& o, const string& k, int def) {
+    auto it = o.find(k); if (it == o.end() || it->second.empty()) return def;
+    try { return stoi(it->second); } catch (...) { return def; }
+}
+static double jDbl(map<string,string>& o, const string& k, double def) {
+    auto it = o.find(k); if (it == o.end() || it->second.empty()) return def;
+    try { return stod(it->second); } catch (...) { return def; }
+}
+static string jStr(map<string,string>& o, const string& k, const string& def) {
+    auto it = o.find(k); return it == o.end() ? def : it->second;
+}
+// 把目前技能資料匯出成 skills.json（首次執行用，產生可編輯的檔）
+void writeSkillsToJson(const string& path, Skill db[][10]) {
+    ofstream f(path);
+    if (!f) return;
+    f << "[\n";
+    bool first = true;
+    for (int j = 0; j < 18; j++)
+        for (int s = 0; s < 10; s++) {
+            if (db[j][s].name.empty()) continue;
+            Skill& k = db[j][s];
+            if (!first) f << ",\n"; first = false;
+            f << "{\"job\":" << j << ",\"slot\":" << s
+              << ",\"name\":\"" << jsonEscape(k.name) << "\""
+              << ",\"reqLevel\":" << k.reqLevel << ",\"mpCost\":" << k.mpCost
+              << ",\"mult\":" << k.damageMult
+              << ",\"effect\":\"" << jsonEscape(k.effect) << "\""
+              << ",\"attribute\":\"" << jsonEscape(k.attribute) << "\""
+              << ",\"attrValue\":" << k.attrValue
+              << ",\"reqWeapon\":\"" << jsonEscape(k.reqWeapon) << "\""
+              << ",\"flavor\":\"" << jsonEscape(k.flavor) << "\"}";
+        }
+    f << "\n]\n";
+}
+// 從 skills.json 讀取並覆蓋技能資料；成功回傳 true
+bool loadSkillsFromJson(const string& path, Skill db[][10]) {
+    ifstream f(path);
+    if (!f) return false;
+    stringstream ss; ss << f.rdbuf();
+    string content = ss.str();
+    vector<map<string,string>> arr = parseJsonArray(content);
+    if (arr.empty()) return false;
+    for (auto& o : arr) {
+        int j = jInt(o, "job", -1), s = jInt(o, "slot", -1);
+        if (j < 0 || j >= 18 || s < 0 || s >= 10) continue;
+        db[j][s].name      = jStr(o, "name", "");
+        db[j][s].reqLevel  = jInt(o, "reqLevel", 1);
+        db[j][s].mpCost    = jInt(o, "mpCost", 0);
+        db[j][s].damageMult= jDbl(o, "mult", 1.0);
+        db[j][s].effect    = jStr(o, "effect", "");
+        db[j][s].attribute = jStr(o, "attribute", "NONE");
+        db[j][s].attrValue = jInt(o, "attrValue", 0);
+        db[j][s].reqWeapon = jStr(o, "reqWeapon", "");
+        db[j][s].flavor    = jStr(o, "flavor", "");
+    }
+    return true;
+}
+
 int rollGachaJob() {
     int roll = rand() % 100;
     vector<int> pool;
@@ -565,7 +686,13 @@ int main() {
     string ch3Monsters[] = {"憤怒的半人馬", "墮落巨魔", "地獄雙頭犬", "深淵惡魔", "烈焰魅魔", "死亡使者"};
 
     Skill skillDatabase[18][10];
-    initAllSkills(skillDatabase);
+    initAllSkills(skillDatabase); // 先載入內建預設（安全網）
+    // 資料驅動：若 skills.json 存在則以它覆蓋（可自由編輯技能而不用改程式）；不存在則匯出一份供編輯
+    {
+        ifstream skTest("skills.json");
+        if (skTest.good()) { skTest.close(); loadSkillsFromJson("skills.json", skillDatabase); }
+        else { skTest.close(); writeSkillsToJson("skills.json", skillDatabase); }
+    }
 
     string playerName;
     Character player("TEMP", "劍士", 100, 20, 30, 5);
