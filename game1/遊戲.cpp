@@ -158,8 +158,8 @@ string getSaveFileName(int slot) { return "rpg_save_slot" + to_string(slot) + ".
 void peekSaveSlot(int slot) {
     ifstream in(getSaveFileName(slot));
     if (in) {
-        string name, job; int level;
-        in >> name >> job >> level;
+        string name, job; int level = 0;
+        getline(in, name); in >> job >> level; // 名字可能含空格，需用 getline
         cout << " [" << slot << "] 檔號 " << slot << " : " << name << " (" << job << ") Lv." << level << "\n";
     } else {
         cout << " [" << slot << "] 檔號 " << slot << " : --- 空白存檔 ---\n";
@@ -538,7 +538,7 @@ int main() {
             cout << " 一路討伐魔物，最終擊敗【遠古滅世巨龍】，奪回聖物！\n\n";
             cout << "【玩法說明】\n";
             cout << " ⚔️ 波次戰鬥：以回合制迎戰一波波魔物，共 10 波。\n";
-            cout << " 🌟 職業系統：14 種職業 + 隱藏職，可自選或命運抽卡 (含 SSR)。\n";
+            cout << " 🌟 職業系統：17 種職業 + 隱藏職，可自選或命運抽卡 (含 SSR)；新職有 8 技能 + 2 絕招。\n";
             cout << " 💪 屬性配點：升級獲得點數，投資力量/體質/敏捷/幸運。\n";
             cout << " 🔮 技能連招：每個職業有 3 招專屬技能，隨等級解鎖。\n";
             cout << " 🧪 狀態效果：點燃、中毒、暈眩、吸血、攻防增益等。\n";
@@ -591,7 +591,8 @@ int main() {
             if (slotChoice >= 1 && slotChoice <= 3) {
                 ifstream inFile(getSaveFileName(slotChoice));
                 if (!inFile) { cout << "❌ 該檔號沒有存檔紀錄！\n"; waitPlayer(); continue; }
-                inFile >> player.name >> player.job >> player.level >> player.exp >> player.maxExp
+                getline(inFile, player.name); // 名字可能含空格，需用 getline（職業名無空格用 >> 即可）
+                inFile >> player.job >> player.level >> player.exp >> player.maxExp
                        >> player.statPoints >> player.baseHp >> player.hp >> player.baseAtk
                        >> player.mp >> player.maxMp >> player.mpRegen
                        >> player.strength >> player.constitution >> player.agility >> player.lucky
@@ -705,6 +706,7 @@ int main() {
             cout << " [ 1 ] ⚔️ 力量 (目前: " << player.strength << ") -> 增加總攻擊力\n [ 2 ] 🛡️ 體質 (目前: " << player.constitution << ") -> 增加最大生命值\n [ 3 ] ⚡ 敏捷 (目前: " << player.agility << ") -> 增加 1% 閃避率\n [ 4 ] 🍀 幸運 (目前: " << player.lucky << ") -> 增加 1% 暴擊率\n=========================================\n請選擇要投資的屬性 (1-4): ";
             int statChoice; if (!(cin >> statChoice)) { cin.clear(); cin.ignore(1000, '\n'); continue; }
             cin.ignore(1000, '\n');
+            if (statChoice < 1 || statChoice > 4) { cout << "❌ 請輸入 1~4！\n"; waitPlayer(); continue; } // 無效輸入不扣點
             if (statChoice == 1) player.strength++; else if (statChoice == 2) player.constitution++; else if (statChoice == 3) player.agility++; else if (statChoice == 4) player.lucky++;
             player.statPoints--; player.updateStats();
         }
@@ -734,6 +736,7 @@ int main() {
         }
 
         string currentChapter = ""; string mName = ""; int mHp = 50, mAtk = 10;
+        bool isFinalBoss = false; // 是否為第 10 波最終滅世巨龍（只有擊敗它才算通關）
         if (wave <= 3) {
             currentChapter = "第一章：🌲 迷霧森林";
             if (wave == 3) { mName = "👑 【章節BOSS】哥布林酋長"; mHp = 170; mAtk = 24; }
@@ -746,10 +749,11 @@ int main() {
         }
         else {
             currentChapter = "第三章：🌋 終焉戰場";
-            if (wave == 10) { mName = "🐉 【最終滅世BOSS】遠古滅世巨龍"; mHp = 900; mAtk = 68; }
+            if (wave >= 10) { mName = "🐉 【最終滅世BOSS】遠古滅世巨龍"; mHp = 900; mAtk = 68; isFinalBoss = true; } // 第10波(含以後)都是最終BOSS，確保遊戲會結束
             else { mName = ch3Monsters[rand() % 6] + " (Lv." + to_string(wave) + ")"; mHp = 220 + (wave * 26); mAtk = 28 + (wave * 4); }
         }
 
+        int mHpMax = mHp; // 怪物血量上限（吸血回復不得超過）
         // 🌟 狀態變數 (包含玩家中毒)
         int mBurnDuration = 0, mBurnDamage = 0; bool mStunned = false;
         int pBurnDuration = 0, pBurnDamage = 0; // 玩家中毒/燃燒狀態
@@ -834,8 +838,8 @@ int main() {
                     bool isUlt = (skChoice-1 >= 8);
                     bool weaponOk = (sk.reqWeapon.empty() || sk.reqWeapon == "任意"
                                      || player.weapon.wclass == sk.reqWeapon || player.weapon.wclass == "萬能");
-                    if (player.level < sk.reqLevel && player.job != "創造神") cout << "❌ 等級不足，尚未領悟此技能！\n";
-                    else if (!weaponOk) cout << "❌ 絕招【" << sk.name << "】需裝備【" << sk.reqWeapon << "】類武器才能施展！(目前武器類型：" << (player.weapon.wclass.empty() ? "無" : player.weapon.wclass) << ")\n";
+                    if (player.level < sk.reqLevel && player.job != "創造神") { cout << "❌ 等級不足，尚未領悟此技能！(需 Lv." << sk.reqLevel << ")\n"; waitPlayer(); continue; }
+                    else if (!weaponOk) { cout << "❌ 絕招【" << sk.name << "】需裝備【" << sk.reqWeapon << "】類武器才能施展！(目前武器類型：" << (player.weapon.wclass.empty() ? "無" : player.weapon.wclass) << ")\n"; waitPlayer(); continue; }
                     else if (player.mp >= sk.mpCost) {
                         player.mp -= sk.mpCost;
                         double effMult = sk.damageMult + (player.skillLevel[skChoice-1] - 1) * 0.3; // 技能等級加成
@@ -853,8 +857,8 @@ int main() {
                         else if (sk.attribute == "BUFF_ATK") { pAtkBuff += sk.attrValue; cout << " ➥ 附加：戰意高昂！攻擊力提升！\n"; }
                         else if (sk.attribute == "BUFF_DEF") { pDefBuff += sk.attrValue; cout << " ➥ 附加：堅如磐石！防禦力提升！\n"; }
                         tookAction = true;
-                    } else cout << "❌ 魔力不足！\n";
-                }
+                    } else { cout << "❌ 魔力不足！(需 " << sk.mpCost << " MP，目前 " << player.mp << ")\n"; waitPlayer(); continue; }
+                } else { cout << "❌ 無效的技能編號！\n"; waitPlayer(); continue; }
             } else if (choice == 3) {
                 if (potions > 0) { potions--; player.hp = min(player.maxHp, player.hp + 60); cout << "🧪 回復了 60 點生命值！\n"; tookAction = true; }
                 else { cout << "❌ 沒有藥水了！\n"; waitPlayer(); continue; }
@@ -888,6 +892,8 @@ int main() {
                         cout << "🧛 " << mName << " 使用了特技【生命汲取】！\n";
                         rawMonsterDam *= 1.3;
                         int healAmount = rawMonsterDam / 2;
+                        if (mHp + healAmount > mHpMax) healAmount = mHpMax - mHp; // 不超過血量上限
+                        if (healAmount < 0) healAmount = 0;
                         mHp += healAmount;
                         cout << " 🩸 " << mName << " 透過吸血回復了 " << healAmount << " 點 HP！\n";
                     } else {
@@ -932,12 +938,20 @@ int main() {
             battlePause();
         }
         if(player.isAlive()){
+            // ✅ 只有「真的擊敗第 10 波最終滅世巨龍」才算通關（調波數不會誤判）
+            if (isFinalBoss) {
+                cout << "\n=================================================\n";
+                cout << " 📈 【戰後結算】\n";
+                cout << "=================================================\n";
+                player.gainExp(50 + wave * 5);
+                cout << "\n🏆🏆🏆 恭喜你！擊敗了最終滅世巨龍，拯救了世界！ 🏆🏆🏆\n";
+                waitPlayer(); break;
+            }
             wave++;
             cout << "\n=================================================\n";
             cout << " 📈 【戰後結算】目前已推進至第 " << wave << " 波\n";
             cout << "=================================================\n";
             player.gainExp(50 + wave * 5);
-            if (wave > 10) { cout << "\n🏆🏆🏆 恭喜你！已擊敗最終滅世BOSS，拯救了世界！ 🏆🏆🏆\n"; waitPlayer(); break; }
             waitPlayer();
         }
     }
