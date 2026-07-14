@@ -199,10 +199,15 @@ void saveGame(Character& p, int gold, int potions, int wave, int slot) {
 // 商店商品通用結構：裝備本體、售價、最低登場章節
 struct ShopItem { Equipment eq; int price; int minCh; };
 
+// 全域資料池（皆有內建預設，可由對應的 JSON 檔覆蓋）
+vector<ShopItem> gWeaponPool;   // 武器商品池 ← weapons.json
+vector<ShopItem> gArmorPool;    // 防具商品池 ← armors.json
+vector<string>   gMonsters[3];  // 三章一般魔物名 ← monsters.json
+
 // 依章節從商品池隨機挑出本次販售的品項（每次進店都不一樣）
-vector<int> rollStock(ShopItem pool[], int poolSize, int chapter, int maxOffer) {
+vector<int> rollStock(vector<ShopItem>& pool, int chapter, int maxOffer) {
     vector<int> eligible;
-    for (int i = 0; i < poolSize; i++) if (pool[i].minCh <= chapter) eligible.push_back(i);
+    for (int i = 0; i < (int)pool.size(); i++) if (pool[i].minCh <= chapter) eligible.push_back(i);
     // Fisher-Yates 洗牌
     for (int i = (int)eligible.size() - 1; i > 0; i--) { int j = rand() % (i + 1); swap(eligible[i], eligible[j]); }
     int n = min((int)eligible.size(), maxOffer);
@@ -211,25 +216,8 @@ vector<int> rollStock(ShopItem pool[], int poolSize, int chapter, int maxOffer) 
 
 // 🌟 武器商店：販售帶有元素屬性的武器（隨章節變強、每次進貨隨機）
 void weaponShop(Character& p, int& gold, int chapter) {
-    ShopItem pool[] = {
-        { {"精鋼劍",   "Weapon", 15, 3,  "無", 0,  "劍" },   80,   1 },
-        { {"淬毒匕首", "Weapon", 25, 8,  "毒", 12, "匕首" }, 250,  1 },
-        { {"烈焰長劍", "Weapon", 30, 5,  "火", 15, "劍" },   320,  1 },
-        { {"寒冰之刃", "Weapon", 45, 6,  "冰", 0,  "劍" },   420,  2 },
-        { {"雷神之槍", "Weapon", 55, 7,  "雷", 0,  "槍" },   520,  2 },
-        { {"獄炎巨劍", "Weapon", 60, 5,  "火", 30, "巨劍" }, 560,  2 },
-        { {"秘銀聖劍", "Weapon", 85, 10, "無", 0,  "劍" },   720,  3 },
-        { {"死亡鐮刀", "Weapon", 95, 8,  "毒", 40, "鐮" },   850,  3 },
-        { {"雷霆審判", "Weapon", 110,10, "雷", 0,  "槍" },   1050, 3 },
-        { {"疾影短刀", "Weapon", 40, 12, "無", 0,  "匕首" }, 380,  2 },
-        { {"破軍龍槍", "Weapon", 100,9,  "雷", 0,  "槍" },   980,  3 },
-        { {"星光法杖", "Weapon", 35, 4,  "無", 0,  "法杖" }, 350,  1 },
-        { {"烈焰法杖", "Weapon", 55, 5,  "火", 20, "法杖" }, 560,  2 },
-        { {"死靈法杖", "Weapon", 95, 8,  "毒", 30, "法杖" }, 980,  3 },
-        { {"精靈之弓", "Weapon", 50, 10, "無", 0,  "弓" },   480,  2 }
-    };
-    int poolSize = sizeof(pool) / sizeof(pool[0]);
-    vector<int> offer = rollStock(pool, poolSize, chapter, 4); // 進店時決定本次庫存
+    vector<ShopItem>& pool = gWeaponPool; // 使用全域武器池（可由 weapons.json 覆蓋）
+    vector<int> offer = rollStock(pool, chapter, 4); // 進店時決定本次庫存
     int offerCount = (int)offer.size();
 
     while (true) {
@@ -268,19 +256,8 @@ void weaponShop(Character& p, int& gold, int chapter) {
 // 🌟 防具商店：販售帶有防禦特性的防具（隨章節變強、每次進貨隨機）
 // 防具 element：無 / 反傷(反彈%傷害) / 減傷(減免%傷害)，elemValue 為百分比
 void armorShop(Character& p, int& gold, int chapter) {
-    ShopItem pool[] = {
-        { {"鐵甲",       "Armor", 20, 3,  "無",   0 },  90,   1 },
-        { {"荊棘背心",   "Armor", 15, 2,  "反傷", 25 }, 280,  1 },
-        { {"厚重板甲",   "Armor", 40, 0,  "減傷", 15 }, 340,  1 },
-        { {"精鋼鎧",     "Armor", 60, 4,  "無",   0 },  450,  2 },
-        { {"復仇之盾甲", "Armor", 45, 3,  "反傷", 40 }, 600,  2 },
-        { {"龍鱗甲",     "Armor", 80, 2,  "減傷", 25 }, 700,  2 },
-        { {"聖光鎧",     "Armor", 120,6,  "無",   0 },  900,  3 },
-        { {"荊棘魔鎧",   "Armor", 90, 4,  "反傷", 60 }, 1100, 3 },
-        { {"不滅神甲",   "Armor", 150,3,  "減傷", 35 }, 1300, 3 }
-    };
-    int poolSize = sizeof(pool) / sizeof(pool[0]);
-    vector<int> offer = rollStock(pool, poolSize, chapter, 4);
+    vector<ShopItem>& pool = gArmorPool; // 使用全域防具池（可由 armors.json 覆蓋）
+    vector<int> offer = rollStock(pool, chapter, 4);
     int offerCount = (int)offer.size();
 
     while (true) {
@@ -664,6 +641,155 @@ bool loadSkillsFromJson(const string& path, Skill db[][10]) {
     return true;
 }
 
+// ===== 內建預設資料（安全網；首次執行會匯出成 JSON 供編輯）=====
+void initDefaultWeapons() {
+    gWeaponPool = {
+        { {"精鋼劍",   "Weapon", 15, 3,  "無", 0,  "劍" },   80,   1 },
+        { {"淬毒匕首", "Weapon", 25, 8,  "毒", 12, "匕首" }, 250,  1 },
+        { {"烈焰長劍", "Weapon", 30, 5,  "火", 15, "劍" },   320,  1 },
+        { {"寒冰之刃", "Weapon", 45, 6,  "冰", 0,  "劍" },   420,  2 },
+        { {"雷神之槍", "Weapon", 55, 7,  "雷", 0,  "槍" },   520,  2 },
+        { {"獄炎巨劍", "Weapon", 60, 5,  "火", 30, "巨劍" }, 560,  2 },
+        { {"秘銀聖劍", "Weapon", 85, 10, "無", 0,  "劍" },   720,  3 },
+        { {"死亡鐮刀", "Weapon", 95, 8,  "毒", 40, "鐮" },   850,  3 },
+        { {"雷霆審判", "Weapon", 110,10, "雷", 0,  "槍" },   1050, 3 },
+        { {"疾影短刀", "Weapon", 40, 12, "無", 0,  "匕首" }, 380,  2 },
+        { {"破軍龍槍", "Weapon", 100,9,  "雷", 0,  "槍" },   980,  3 },
+        { {"星光法杖", "Weapon", 35, 4,  "無", 0,  "法杖" }, 350,  1 },
+        { {"烈焰法杖", "Weapon", 55, 5,  "火", 20, "法杖" }, 560,  2 },
+        { {"死靈法杖", "Weapon", 95, 8,  "毒", 30, "法杖" }, 980,  3 },
+        { {"精靈之弓", "Weapon", 50, 10, "無", 0,  "弓" },   480,  2 }
+    };
+}
+void initDefaultArmors() {
+    gArmorPool = {
+        { {"鐵甲",       "Armor", 20, 3,  "無",   0, "" },  90,   1 },
+        { {"荊棘背心",   "Armor", 15, 2,  "反傷", 25,"" }, 280,  1 },
+        { {"厚重板甲",   "Armor", 40, 0,  "減傷", 15,"" }, 340,  1 },
+        { {"精鋼鎧",     "Armor", 60, 4,  "無",   0, "" }, 450,  2 },
+        { {"復仇之盾甲", "Armor", 45, 3,  "反傷", 40,"" }, 600,  2 },
+        { {"龍鱗甲",     "Armor", 80, 2,  "減傷", 25,"" }, 700,  2 },
+        { {"聖光鎧",     "Armor", 120,6,  "無",   0, "" }, 900,  3 },
+        { {"荊棘魔鎧",   "Armor", 90, 4,  "反傷", 60,"" }, 1100, 3 },
+        { {"不滅神甲",   "Armor", 150,3,  "減傷", 35,"" }, 1300, 3 }
+    };
+}
+void initDefaultMonsters() {
+    gMonsters[0] = {"綠色史萊姆", "森林毒蛛", "幼小妖狐", "狂暴野豬", "劇毒花妖", "迷霧樹精", "哥布林斥候"};
+    gMonsters[1] = {"幽靈骷髏", "怨恨殭屍", "詛咒石像鬼", "地底岩魔", "吸血蝙蝠群", "黑暗騎士"};
+    gMonsters[2] = {"憤怒的半人馬", "墮落巨魔", "地獄雙頭犬", "深淵惡魔", "烈焰魅魔", "死亡使者"};
+}
+
+// ---- 裝備商品池 JSON ----
+void writeShopItemsJson(const string& path, vector<ShopItem>& pool, const string& type) {
+    ofstream f(path); if (!f) return;
+    f << "[\n";
+    for (size_t i = 0; i < pool.size(); i++) {
+        Equipment& e = pool[i].eq;
+        if (i) f << ",\n";
+        f << "{\"name\":\"" << jsonEscape(e.name) << "\",\"type\":\"" << type << "\""
+          << ",\"value\":" << e.value << ",\"subValue\":" << e.subValue
+          << ",\"element\":\"" << jsonEscape(e.element) << "\",\"elemValue\":" << e.elemValue
+          << ",\"wclass\":\"" << jsonEscape(e.wclass) << "\""
+          << ",\"price\":" << pool[i].price << ",\"minCh\":" << pool[i].minCh << "}";
+    }
+    f << "\n]\n";
+}
+bool loadShopItemsJson(const string& path, vector<ShopItem>& pool, const string& type) {
+    ifstream f(path); if (!f) return false;
+    stringstream ss; ss << f.rdbuf();
+    vector<map<string,string>> arr = parseJsonArray(ss.str());
+    if (arr.empty()) return false;
+    pool.clear();
+    for (auto& o : arr) {
+        ShopItem it;
+        it.eq.name = jStr(o, "name", "?");
+        it.eq.type = jStr(o, "type", type);
+        it.eq.value = jInt(o, "value", 0);
+        it.eq.subValue = jInt(o, "subValue", 0);
+        it.eq.element = jStr(o, "element", "無");
+        it.eq.elemValue = jInt(o, "elemValue", 0);
+        it.eq.wclass = jStr(o, "wclass", "");
+        it.price = jInt(o, "price", 100);
+        it.minCh = jInt(o, "minCh", 1);
+        pool.push_back(it);
+    }
+    return true;
+}
+
+// ---- 職業 JSON ----
+void writeJobsJson(const string& path) {
+    ofstream f(path); if (!f) return;
+    f << "[\n";
+    for (int i = 0; i < JOB_COUNT; i++) {
+        JobTemplate& j = jobDB[i];
+        if (i) f << ",\n";
+        f << "{\"name\":\"" << jsonEscape(j.name) << "\",\"rarity\":\"" << jsonEscape(j.rarity) << "\""
+          << ",\"hp\":" << j.hp << ",\"atk\":" << j.atk << ",\"mp\":" << j.mp << ",\"regen\":" << j.regen
+          << ",\"agi\":" << j.agiBonus << ",\"luk\":" << j.lukBonus
+          << ",\"desc\":\"" << jsonEscape(j.desc) << "\",\"weaponClass\":\"" << jsonEscape(j.weaponClass) << "\"}";
+    }
+    f << "\n]\n";
+}
+bool loadJobsJson(const string& path) {
+    ifstream f(path); if (!f) return false;
+    stringstream ss; ss << f.rdbuf();
+    vector<map<string,string>> arr = parseJsonArray(ss.str());
+    if (arr.empty()) return false;
+    int n = min((int)arr.size(), JOB_COUNT);
+    for (int i = 0; i < n; i++) {
+        jobDB[i].name = jStr(arr[i], "name", jobDB[i].name);
+        jobDB[i].rarity = jStr(arr[i], "rarity", jobDB[i].rarity);
+        jobDB[i].hp = jInt(arr[i], "hp", jobDB[i].hp);
+        jobDB[i].atk = jInt(arr[i], "atk", jobDB[i].atk);
+        jobDB[i].mp = jInt(arr[i], "mp", jobDB[i].mp);
+        jobDB[i].regen = jInt(arr[i], "regen", jobDB[i].regen);
+        jobDB[i].agiBonus = jInt(arr[i], "agi", jobDB[i].agiBonus);
+        jobDB[i].lukBonus = jInt(arr[i], "luk", jobDB[i].lukBonus);
+        jobDB[i].desc = jStr(arr[i], "desc", jobDB[i].desc);
+        jobDB[i].weaponClass = jStr(arr[i], "weaponClass", jobDB[i].weaponClass);
+    }
+    return true;
+}
+
+// ---- 魔物 JSON ----
+void writeMonstersJson(const string& path) {
+    ofstream f(path); if (!f) return;
+    f << "[\n";
+    bool first = true;
+    for (int c = 0; c < 3; c++)
+        for (size_t i = 0; i < gMonsters[c].size(); i++) {
+            if (!first) f << ",\n"; first = false;
+            f << "{\"chapter\":" << (c + 1) << ",\"name\":\"" << jsonEscape(gMonsters[c][i]) << "\"}";
+        }
+    f << "\n]\n";
+}
+bool loadMonstersJson(const string& path) {
+    ifstream f(path); if (!f) return false;
+    stringstream ss; ss << f.rdbuf();
+    vector<map<string,string>> arr = parseJsonArray(ss.str());
+    if (arr.empty()) return false;
+    vector<string> tmp[3];
+    for (auto& o : arr) {
+        int c = jInt(o, "chapter", 1) - 1;
+        if (c < 0 || c > 2) continue;
+        string nm = jStr(o, "name", "");
+        if (!nm.empty()) tmp[c].push_back(nm);
+    }
+    for (int c = 0; c < 3; c++) if (!tmp[c].empty()) gMonsters[c] = tmp[c]; // 非空才覆蓋，避免整章空掉
+    return true;
+}
+
+// 統一載入所有資料：先套內建預設，再以存在的 JSON 覆蓋，不存在則匯出
+void loadAllGameData(Skill skillDB[][10]) {
+    initAllSkills(skillDB); initDefaultWeapons(); initDefaultArmors(); initDefaultMonsters();
+    ifstream t1("skills.json");  if (t1.good()) { t1.close(); loadSkillsFromJson("skills.json", skillDB); } else { t1.close(); writeSkillsToJson("skills.json", skillDB); }
+    ifstream t2("jobs.json");    if (t2.good()) { t2.close(); loadJobsJson("jobs.json"); }             else { t2.close(); writeJobsJson("jobs.json"); }
+    ifstream t3("weapons.json"); if (t3.good()) { t3.close(); loadShopItemsJson("weapons.json", gWeaponPool, "Weapon"); } else { t3.close(); writeShopItemsJson("weapons.json", gWeaponPool, "Weapon"); }
+    ifstream t4("armors.json");  if (t4.good()) { t4.close(); loadShopItemsJson("armors.json", gArmorPool, "Armor"); }   else { t4.close(); writeShopItemsJson("armors.json", gArmorPool, "Armor"); }
+    ifstream t5("monsters.json");if (t5.good()) { t5.close(); loadMonstersJson("monsters.json"); }     else { t5.close(); writeMonstersJson("monsters.json"); }
+}
+
 int rollGachaJob() {
     int roll = rand() % 100;
     vector<int> pool;
@@ -680,19 +806,9 @@ int main() {
     #endif
     srand(time(0));
 
-    // 🌟 恢復完整 19 種魔物陣列
-    string ch1Monsters[] = {"綠色史萊姆", "森林毒蛛", "幼小妖狐", "狂暴野豬", "劇毒花妖", "迷霧樹精", "哥布林斥候"};
-    string ch2Monsters[] = {"幽靈骷髏", "怨恨殭屍", "詛咒石像鬼", "地底岩魔", "吸血蝙蝠群", "黑暗騎士"};
-    string ch3Monsters[] = {"憤怒的半人馬", "墮落巨魔", "地獄雙頭犬", "深淵惡魔", "烈焰魅魔", "死亡使者"};
-
     Skill skillDatabase[18][10];
-    initAllSkills(skillDatabase); // 先載入內建預設（安全網）
-    // 資料驅動：若 skills.json 存在則以它覆蓋（可自由編輯技能而不用改程式）；不存在則匯出一份供編輯
-    {
-        ifstream skTest("skills.json");
-        if (skTest.good()) { skTest.close(); loadSkillsFromJson("skills.json", skillDatabase); }
-        else { skTest.close(); writeSkillsToJson("skills.json", skillDatabase); }
-    }
+    // 🌟 資料驅動：載入內建預設，再以 skills/jobs/weapons/armors/monsters.json 覆蓋（不存在則自動匯出）
+    loadAllGameData(skillDatabase);
 
     string playerName;
     Character player("TEMP", "劍士", 100, 20, 30, 5);
@@ -743,13 +859,13 @@ int main() {
             clearScreen();
             cout << "================= 📜 魔物情報與圖鑑 =================\n";
             cout << "【第一章：迷霧森林】(專屬特技：毒液飛濺，附加持續中毒)\n";
-            cout << "一般魔物："; for(auto m : ch1Monsters) cout << m << " | "; cout << "\n鎮區守衛：👑 哥布林酋長\n\n";
+            cout << "一般魔物："; for(auto& m : gMonsters[0]) cout << m << " | "; cout << "\n鎮區守衛：👑 哥布林酋長\n\n";
 
             cout << "【第二章：地下墓穴】(專屬特技：生命汲取，傷害轉化回復)\n";
-            cout << "一般魔物："; for(auto m : ch2Monsters) cout << m << " | "; cout << "\n鎮區守衛：🔮 不死巫妖王\n\n";
+            cout << "一般魔物："; for(auto& m : gMonsters[1]) cout << m << " | "; cout << "\n鎮區守衛：🔮 不死巫妖王\n\n";
 
             cout << "【第三章：終焉戰場】(專屬特技：粉碎重擊，無視並破壞防禦狀態)\n";
-            cout << "一般魔物："; for(auto m : ch3Monsters) cout << m << " | "; cout << "\n鎮區守衛：🐉 遠古滅世巨龍\n\n";
+            cout << "一般魔物："; for(auto& m : gMonsters[2]) cout << m << " | "; cout << "\n鎮區守衛：🐉 遠古滅世巨龍\n\n";
 
             cout << "-----------------------------------------------------\n";
             cout << "【職業圖鑑】(14 職 + 3 新職 + 1 隱藏職)\n";
@@ -926,17 +1042,17 @@ int main() {
         if (wave <= 3) {
             currentChapter = "第一章：🌲 迷霧森林";
             if (wave == 3) { mName = "👑 【章節BOSS】哥布林酋長"; mHp = 170; mAtk = 24; }
-            else { mName = ch1Monsters[rand() % 7] + " (Lv." + to_string(wave) + ")"; mHp = 50 + (wave * 15); mAtk = 11 + (wave * 2); }
+            else { mName = gMonsters[0][rand() % gMonsters[0].size()] + " (Lv." + to_string(wave) + ")"; mHp = 50 + (wave * 15); mAtk = 11 + (wave * 2); }
         }
         else if (wave <= 6) {
             currentChapter = "第二章：💀 地下墓穴";
             if (wave == 6) { mName = "🔮 【章節BOSS】不死巫妖王"; mHp = 380; mAtk = 38; }
-            else { mName = ch2Monsters[rand() % 6] + " (Lv." + to_string(wave) + ")"; mHp = 110 + (wave * 22); mAtk = 18 + (wave * 3); }
+            else { mName = gMonsters[1][rand() % gMonsters[1].size()] + " (Lv." + to_string(wave) + ")"; mHp = 110 + (wave * 22); mAtk = 18 + (wave * 3); }
         }
         else {
             currentChapter = "第三章：🌋 終焉戰場";
             if (wave >= 10) { mName = "🐉 【最終滅世BOSS】遠古滅世巨龍"; mHp = 900; mAtk = 68; isFinalBoss = true; } // 第10波(含以後)都是最終BOSS，確保遊戲會結束
-            else { mName = ch3Monsters[rand() % 6] + " (Lv." + to_string(wave) + ")"; mHp = 220 + (wave * 26); mAtk = 28 + (wave * 4); }
+            else { mName = gMonsters[2][rand() % gMonsters[2].size()] + " (Lv." + to_string(wave) + ")"; mHp = 220 + (wave * 26); mAtk = 28 + (wave * 4); }
         }
 
         int mHpMax = mHp; // 怪物血量上限（吸血回復不得超過）

@@ -1,0 +1,17 @@
+[
+{"name":"精鋼劍","type":"Weapon","value":15,"subValue":3,"element":"無","elemValue":0,"wclass":"劍","price":80,"minCh":1},
+{"name":"淬毒匕首","type":"Weapon","value":25,"subValue":8,"element":"毒","elemValue":12,"wclass":"匕首","price":250,"minCh":1},
+{"name":"烈焰長劍","type":"Weapon","value":30,"subValue":5,"element":"火","elemValue":15,"wclass":"劍","price":320,"minCh":1},
+{"name":"寒冰之刃","type":"Weapon","value":45,"subValue":6,"element":"冰","elemValue":0,"wclass":"劍","price":420,"minCh":2},
+{"name":"雷神之槍","type":"Weapon","value":55,"subValue":7,"element":"雷","elemValue":0,"wclass":"槍","price":520,"minCh":2},
+{"name":"獄炎巨劍","type":"Weapon","value":60,"subValue":5,"element":"火","elemValue":30,"wclass":"巨劍","price":560,"minCh":2},
+{"name":"秘銀聖劍","type":"Weapon","value":85,"subValue":10,"element":"無","elemValue":0,"wclass":"劍","price":720,"minCh":3},
+{"name":"死亡鐮刀","type":"Weapon","value":95,"subValue":8,"element":"毒","elemValue":40,"wclass":"鐮","price":850,"minCh":3},
+{"name":"雷霆審判","type":"Weapon","value":110,"subValue":10,"element":"雷","elemValue":0,"wclass":"槍","price":1050,"minCh":3},
+{"name":"疾影短刀","type":"Weapon","value":40,"subValue":12,"element":"無","elemValue":0,"wclass":"匕首","price":380,"minCh":2},
+{"name":"破軍龍槍","type":"Weapon","value":100,"subValue":9,"element":"雷","elemValue":0,"wclass":"槍","price":980,"minCh":3},
+{"name":"星光法杖","type":"Weapon","value":35,"subValue":4,"element":"無","elemValue":0,"wclass":"法杖","price":350,"minCh":1},
+{"name":"烈焰法杖","type":"Weapon","value":55,"subValue":5,"element":"火","elemValue":20,"wclass":"法杖","price":560,"minCh":2},
+{"name":"死靈法杖","type":"Weapon","value":95,"subValue":8,"element":"毒","elemValue":30,"wclass":"法杖","price":980,"minCh":3},
+{"name":"精靈之弓","type":"Weapon","value":50,"subValue":10,"element":"無","elemValue":0,"wclass":"弓","price":480,"minCh":2}
+]

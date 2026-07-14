@@ -1,0 +1,11 @@
+[
+{"name":"鐵甲","type":"Armor","value":20,"subValue":3,"element":"無","elemValue":0,"wclass":"","price":90,"minCh":1},
+{"name":"荊棘背心","type":"Armor","value":15,"subValue":2,"element":"反傷","elemValue":25,"wclass":"","price":280,"minCh":1},
+{"name":"厚重板甲","type":"Armor","value":40,"subValue":0,"element":"減傷","elemValue":15,"wclass":"","price":340,"minCh":1},
+{"name":"精鋼鎧","type":"Armor","value":60,"subValue":4,"element":"無","elemValue":0,"wclass":"","price":450,"minCh":2},
+{"name":"復仇之盾甲","type":"Armor","value":45,"subValue":3,"element":"反傷","elemValue":40,"wclass":"","price":600,"minCh":2},
+{"name":"龍鱗甲","type":"Armor","value":80,"subValue":2,"element":"減傷","elemValue":25,"wclass":"","price":700,"minCh":2},
+{"name":"聖光鎧","type":"Armor","value":120,"subValue":6,"element":"無","elemValue":0,"wclass":"","price":900,"minCh":3},
+{"name":"荊棘魔鎧","type":"Armor","value":90,"subValue":4,"element":"反傷","elemValue":60,"wclass":"","price":1100,"minCh":3},
+{"name":"不滅神甲","type":"Armor","value":150,"subValue":3,"element":"減傷","elemValue":35,"wclass":"","price":1300,"minCh":3}
+]
