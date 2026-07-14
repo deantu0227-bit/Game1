@@ -1,0 +1,18 @@
+{
+    "configurations": [
+        {
+            "name": "Win32-MinGW",
+            "includePath": [
+                "${workspaceFolder}/**"
+            ],
+            "defines": [
+                "_WIN32"
+            ],
+            "compilerPath": "C:/Program Files/CodeBlocks/MinGW/bin/g++.exe",
+            "cStandard": "c11",
+            "cppStandard": "c++11",
+            "intelliSenseMode": "windows-gcc-x64"
+        }
+    ],
+    "version": 4
+}

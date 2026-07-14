@@ -68,11 +68,13 @@ public:
     int mp; int maxMp; int mpRegen;
     int strength; int constitution; int agility; int lucky;
     int dodgeChance; int critChance;
+    int skillLevel[3]; // 目前職業三個技能的等級（Lv.1 起，每級傷害倍率 +0.3）
     Equipment weapon; Equipment armor;
 
     Character(string n, string j, int h, int a, int m, int r) {
         name = n; job = j; level = 1; exp = 0; maxExp = 100; statPoints = 0;
         baseHp = h; baseAtk = a; strength = 0; constitution = 0; agility = 0; lucky = 0;
+        skillLevel[0] = 1; skillLevel[1] = 1; skillLevel[2] = 1;
         weapon = { "新手舊劍", "Weapon", 0, 5, "無", 0 };
         armor = { "破舊布衣", "Armor", 0, 5, "無", 0 };
         updateStats();
@@ -147,7 +149,8 @@ void saveGame(Character& p, int gold, int potions, int wave, int slot) {
             << p.weapon.name << "\n" << p.weapon.value << "\n" << p.weapon.subValue << "\n"
             << p.armor.name << "\n" << p.armor.value << "\n" << p.armor.subValue << "\n"
             << p.weapon.element << "\n" << p.weapon.elemValue << "\n"
-            << p.armor.element << "\n" << p.armor.elemValue << "\n";
+            << p.armor.element << "\n" << p.armor.elemValue << "\n"
+            << p.skillLevel[0] << "\n" << p.skillLevel[1] << "\n" << p.skillLevel[2] << "\n";
     outFile.close();
     cout << "💾 【系統提示】進度已成功儲存至 檔號 " << slot << "！\n";
     waitPlayer();
@@ -267,9 +270,10 @@ void armorShop(Character& p, int& gold, int chapter) {
 
 // 🌟 開發者控制台函式
 // 🌟 開發者控制台函式 (已擴充等級與職業修改)
-void adminPanel(Character& p, int& gold, int& potions, int& wave, int& mHp, int& mAtk, string mName) {
+void adminPanel(Character& p, int& gold, int& potions, int& wave, int& mHp, int& mAtk, string mName, Skill skillDB[][3]) {
     while (true) {
         clearScreen();
+        int jIdx = getJobIndex(p.job); // 隨時對應目前職業的技能
         cout << "=========================================\n       ⚙️ 開發者控制模式 (Admin) ⚙️       \n=========================================\n";
         cout << " [1] 修改最大生命 (目前: " << p.maxHp << ")\n";
         cout << " [2] 修改基礎攻擊 (目前: " << p.baseAtk << ")\n";
@@ -282,7 +286,9 @@ void adminPanel(Character& p, int& gold, int& potions, int& wave, int& mHp, int&
         }
         cout << " [8] 修改角色等級 (目前: Lv." << p.level << ")\n";
         cout << " [9] 修改角色職業 (目前: " << p.job << ")\n";
-        cout << " [0] ↩️ 返回遊戲\n=========================================\n請選擇要修改的項目 (0-9): ";
+        cout << " [10] 升級技能 (技能等級: "
+             << p.skillLevel[0] << "/" << p.skillLevel[1] << "/" << p.skillLevel[2] << ")\n";
+        cout << " [0] ↩️ 返回遊戲\n=========================================\n請選擇要修改的項目 (0-10): ";
 
         int choice; if (!(cin >> choice)) { cin.clear(); cin.ignore(1000, '\n'); continue; }
         cin.ignore(1000, '\n');
@@ -291,9 +297,18 @@ void adminPanel(Character& p, int& gold, int& potions, int& wave, int& mHp, int&
         // 如果選擇修改職業，印出職業參照表
         if (choice == 9) {
             cout << "👉 職業參照表：\n  0:劍士, 1:魔法師, 2:刺客, 3:狂戰士, 4:弓箭手\n  5:吟遊詩人, 6:武僧, 7:槍手, 8:聖騎士, 9:死靈法師\n  10:幻術師, 11:黑暗祭司, 12:龍騎士, 13:魔劍士, 14:創造神\n";
+            cout << "👉 請輸入新的職業編號 (0-14): ";
         }
+        else if (choice == 10) {
+            cout << "👉 目前【" << p.job << "】的技能：\n";
+            for (int i = 0; i < 3; i++)
+                cout << "  [" << (i + 1) << "] " << skillDB[jIdx][i].name
+                     << " (Lv." << p.skillLevel[i] << "，倍率 "
+                     << (skillDB[jIdx][i].damageMult + (p.skillLevel[i] - 1) * 0.3) << ")\n";
+            cout << "👉 請輸入要升級的技能編號 (1-3): ";
+        }
+        else cout << "👉 請輸入新的數值: ";
 
-        cout << "👉 請輸入新的數值: ";
         int newVal; if (!(cin >> newVal)) { cin.clear(); cin.ignore(1000, '\n'); continue; }
         cin.ignore(1000, '\n');
 
@@ -312,9 +327,19 @@ void adminPanel(Character& p, int& gold, int& potions, int& wave, int& mHp, int&
         else if (choice == 9) {
             if (newVal >= 0 && newVal <= 14) {
                 p.job = jobDB[newVal].name;
-                cout << "✅ 修改成功！職業已切換為【" << p.job << "】\n";
+                p.skillLevel[0] = 1; p.skillLevel[1] = 1; p.skillLevel[2] = 1; // 新職業技能重置
+                cout << "✅ 修改成功！職業已切換為【" << p.job << "】，技能已對應更新。\n";
             } else {
                 cout << "❌ 無效的職業編號！\n";
+            }
+        }
+        else if (choice == 10) {
+            if (newVal >= 1 && newVal <= 3) {
+                p.skillLevel[newVal - 1]++;
+                cout << "✅ 技能【" << skillDB[jIdx][newVal - 1].name << "】提升至 Lv."
+                     << p.skillLevel[newVal - 1] << "！\n";
+            } else {
+                cout << "❌ 無效的技能編號！\n";
             }
         }
         waitPlayer();
@@ -498,6 +523,7 @@ int main() {
                 // 武器/防具元素（舊存檔沒有這些欄，讀取失敗時保持預設「無」）
                 player.weapon.element = "無"; player.weapon.elemValue = 0;
                 player.armor.element = "無"; player.armor.elemValue = 0;
+                player.skillLevel[0] = 1; player.skillLevel[1] = 1; player.skillLevel[2] = 1;
                 inFile.ignore();
                 if (getline(inFile, player.weapon.element)) {
                     if (player.weapon.element.empty()) player.weapon.element = "無";
@@ -505,6 +531,7 @@ int main() {
                     if (getline(inFile, player.armor.element)) {
                         if (player.armor.element.empty()) player.armor.element = "無";
                         inFile >> player.armor.elemValue;
+                        inFile >> player.skillLevel[0] >> player.skillLevel[1] >> player.skillLevel[2];
                     }
                 }
                 inFile.close();
@@ -609,7 +636,7 @@ int main() {
                 else if (shopChoice == 3) { armorShop(player, gold, shopChapter); }
                 else if (shopChoice == 4) { saveGame(player, gold, potions, wave, currentSaveSlot); }
                 else if (shopChoice == 5) { inShop = false; }
-                else if (isControlMode && shopChoice == 0) { int dummy = -1; adminPanel(player, gold, potions, wave, dummy, dummy, ""); }
+                else if (isControlMode && shopChoice == 0) { int dummy = -1; adminPanel(player, gold, potions, wave, dummy, dummy, "", skillDatabase); jobIndex = getJobIndex(player.job); }
             }
         }
 
@@ -673,7 +700,7 @@ int main() {
 
             int finalDamage = 0; bool tookAction = false;
 
-            if (isControlMode && choice == 0) { adminPanel(player, gold, potions, wave, mHp, mAtk, mName); continue; }
+            if (isControlMode && choice == 0) { adminPanel(player, gold, potions, wave, mHp, mAtk, mName, skillDatabase); jobIndex = getJobIndex(player.job); continue; }
             else if (choice == 1) {
                 cout << "\n========== ⚔️ 你的回合 ==========\n";
                 cout << "🗡️ 你揮舞【" << player.weapon.name << "】朝著 " << mName << " 攻擊！\n";
@@ -698,7 +725,8 @@ int main() {
                 for (int i=0; i<3; i++) {
                     Skill sk = skillDatabase[jobIndex][i];
                     if (player.job == "創造神" || player.level >= sk.reqLevel) {
-                        cout << "[" << i+1 << "] " << sk.name << " (耗魔:" << sk.mpCost << ") " << sk.effect << "\n";
+                        cout << "[" << i+1 << "] " << sk.name << " (技能 Lv." << player.skillLevel[i]
+                             << " 耗魔:" << sk.mpCost << ") " << sk.effect << "\n";
                     } else cout << "[" << i+1 << "] ??? (Lv." << sk.reqLevel << " 解鎖)\n";
                 }
                 cout << "選擇技能 (1-3): "; int skChoice; if (!(cin >> skChoice)) { cin.clear(); cin.ignore(1000, '\n'); continue; }
@@ -708,9 +736,10 @@ int main() {
                     if (player.level < sk.reqLevel && player.job != "創造神") cout << "❌ 等級不足，尚未領悟此技能！\n";
                     else if (player.mp >= sk.mpCost) {
                         player.mp -= sk.mpCost;
-                        finalDamage = (player.atk + pAtkBuff) * sk.damageMult;
+                        double effMult = sk.damageMult + (player.skillLevel[skChoice-1] - 1) * 0.3; // 技能等級加成
+                        finalDamage = (player.atk + pAtkBuff) * effMult;
                         if (player.job == "刺客" && skChoice >= 2) finalDamage *= 2;
-                        cout << "\n🌟 使出絕招【" << sk.name << "】！\n";
+                        cout << "\n🌟 使出絕招【" << sk.name << "】(技能 Lv." << player.skillLevel[skChoice-1] << ")！\n";
                         if (sk.attribute == "BURN") { mBurnDamage = sk.attrValue; mBurnDuration = 3; cout << " ➥ 附加：施加了烈焰/劇毒！\n"; }
                         else if (sk.attribute == "STUN") { mStunned = true; cout << " ➥ 附加：強大的衝擊讓魔物暈眩了！\n"; }
                         else if (sk.attribute == "HEAL") { player.hp = min(player.maxHp, player.hp + sk.attrValue); cout << " ➥ 附加：治癒了自身 " << sk.attrValue << " 點生命！\n"; }
