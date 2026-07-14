@@ -5,6 +5,12 @@
 #include <algorithm>
 #include <fstream>
 #include <vector>
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
 
 using namespace std;
 
@@ -123,6 +129,20 @@ void clearScreen() {
     #endif
 }
 void waitPlayer() { cout << "\n請按 Enter 鍵繼續..."; cin.get(); }
+
+// 🌟 戰鬥速度：0=手動(按Enter) 1=快速(自動~0.7s) 2=極速(自動~0.15s)
+int gBattleSpeed = 1;
+const char* battleSpeedName() { return gBattleSpeed == 0 ? "手動" : (gBattleSpeed == 1 ? "快速" : "極速"); }
+void sleepMs(int ms) {
+#ifdef _WIN32
+    Sleep(ms);
+#endif
+}
+// 戰鬥中的停頓：手動模式等玩家按 Enter，自動模式短暫延遲後續播
+void battlePause() {
+    if (gBattleSpeed == 0) { waitPlayer(); }
+    else { cout.flush(); sleepMs(gBattleSpeed == 1 ? 700 : 150); }
+}
 
 string getSaveFileName(int slot) { return "rpg_save_slot" + to_string(slot) + ".txt"; }
 
@@ -684,15 +704,15 @@ int main() {
             if (pBurnDuration > 0) {
                 cout << "🤢 中毒發作！你受到了 " << pBurnDamage << " 點毒性傷害！\n";
                 player.hp -= pBurnDamage; pBurnDuration--;
-                if (!player.isAlive()) { cout << "💀 你毒發身亡了...\n"; waitPlayer(); break; }
+                if (!player.isAlive()) { cout << "💀 你毒發身亡了...\n"; battlePause(); break; }
             }
             if (mBurnDuration > 0) {
                 cout << "🔥 燃燒效果發作！" << mName << " 受到了 " << mBurnDamage << " 點灼燒傷害！\n";
                 mHp -= mBurnDamage; mBurnDuration--;
-                if (mHp <= 0) { cout << "💀 魔物被燒死了！\n"; cout << "\n🎉 勝利！獲得經驗值與金幣！\n"; gold += 25 + (wave * 2); waitPlayer(); break; }
+                if (mHp <= 0) { cout << "💀 魔物被燒死了！\n"; cout << "\n🎉 勝利！獲得經驗值與金幣！\n"; gold += 25 + (wave * 2); battlePause(); break; }
             }
 
-            cout << "1. 🗡️ 普通攻擊 | 2. 🔮 使用技能 | 3. 🧪 喝藥水\n";
+            cout << "1. 🗡️ 普通攻擊 | 2. 🔮 使用技能 | 3. 🧪 喝藥水 | 4. ⚡ 戰鬥速度(目前:" << battleSpeedName() << ")\n";
             if (isControlMode) cout << "0. ⚙️ 開啟控制台\n";
             cout << "選擇行動: ";
             int choice; if (!(cin >> choice)) { cin.clear(); cin.ignore(1000, '\n'); continue; }
@@ -701,6 +721,7 @@ int main() {
             int finalDamage = 0; bool tookAction = false;
 
             if (isControlMode && choice == 0) { adminPanel(player, gold, potions, wave, mHp, mAtk, mName, skillDatabase); jobIndex = getJobIndex(player.job); continue; }
+            else if (choice == 4) { gBattleSpeed = (gBattleSpeed + 1) % 3; cout << "⚡ 戰鬥速度已切換為【" << battleSpeedName() << "】\n"; sleepMs(500); continue; }
             else if (choice == 1) {
                 cout << "\n========== ⚔️ 你的回合 ==========\n";
                 cout << "🗡️ 你揮舞【" << player.weapon.name << "】朝著 " << mName << " 攻擊！\n";
@@ -758,9 +779,9 @@ int main() {
                 player.mp = min(player.maxMp, player.mp + player.mpRegen);
             } else continue;
 
-            if (mHp <= 0) { cout << "\n🎉 勝利！擊敗了 " << mName << "！獲得經驗值與金幣！\n"; gold += 25 + (wave * 2); waitPlayer(); break; }
+            if (mHp <= 0) { cout << "\n🎉 勝利！擊敗了 " << mName << "！獲得經驗值與金幣！\n"; gold += 25 + (wave * 2); battlePause(); break; }
 
-            waitPlayer(); // 先讓玩家看清自己這回合的攻擊結果，再進入敵方回合
+            battlePause(); // 先讓玩家看清自己這回合的攻擊結果，再進入敵方回合
 
             // 🌟 怪物反擊與施放專屬技能
             cout << "\n========== 👹 " << mName << " 的回合 ==========\n";
@@ -815,14 +836,14 @@ int main() {
                         cout << "🌵【" << player.armor.name << "・反傷】" << mName << " 受到了 " << reflect << " 點反彈傷害！(剩餘 HP: " << (mHp < 0 ? 0 : mHp) << ")\n";
                         if (mHp <= 0 && player.isAlive()) {
                             cout << "\n🎉 勝利！" << mName << " 被反傷擊倒了！獲得經驗值與金幣！\n";
-                            gold += 25 + (wave * 2); waitPlayer(); break;
+                            gold += 25 + (wave * 2); battlePause(); break;
                         }
                     }
                 }
             }
 
-            if (!player.isAlive()) { cout << "💀 你倒下了... 請重新讀檔再來吧！\n"; waitPlayer(); break; }
-            waitPlayer();
+            if (!player.isAlive()) { cout << "💀 你倒下了... 請重新讀檔再來吧！\n"; battlePause(); break; }
+            battlePause();
         }
         if(player.isAlive()){
             wave++;
