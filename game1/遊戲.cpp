@@ -16,6 +16,49 @@
 
 using namespace std;
 
+// ===== 🎨 顏色與視覺工具 =====
+#ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+#define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#endif
+// 啟用 ANSI 色碼（Windows Terminal / 新版主控台支援）
+void enableAnsiColors() {
+#ifdef _WIN32
+    HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD mode = 0;
+    if (GetConsoleMode(h, &mode)) SetConsoleMode(h, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+#endif
+}
+const char* C_RESET = "\033[0m";
+const char* C_RED    = "\033[91m";  // 傷害
+const char* C_GREEN  = "\033[92m";  // 治療/健康
+const char* C_YELLOW = "\033[93m";  // 暴擊/金幣
+const char* C_BLUE   = "\033[94m";  // 資訊
+const char* C_MAGENTA= "\033[95m";  // 絕招
+const char* C_CYAN   = "\033[96m";  // 標題
+const char* C_GRAY   = "\033[90m";  // 次要
+const char* C_BOLD   = "\033[1m";
+
+// 產生視覺化血條：████████░░░░（依血量比例變色：綠→黃→紅）
+string makeBar(int cur, int mx, int width = 18) {
+    if (mx <= 0) mx = 1;
+    if (cur < 0) cur = 0;
+    if (cur > mx) cur = mx;
+    double ratio = (double)cur / mx;
+    int filled = (int)(ratio * width + 0.5);
+    const char* col = ratio > 0.5 ? C_GREEN : (ratio > 0.25 ? C_YELLOW : C_RED);
+    string bar = col;
+    for (int i = 0; i < width; i++) bar += (i < filled) ? "█" : "░";
+    bar += C_RESET;
+    return bar;
+}
+
+// ===== 📊 戰績統計（通關/陣亡結算用）=====
+long long gTotalDamage = 0; // 累計造成傷害
+int gMaxHit = 0;            // 最大單次傷害
+int gKills = 0;             // 擊殺數
+int gUltUsed = 0;           // 絕招使用次數
+int gTurns = 0;             // 總回合數
+
 // === 基礎結構 ===
 struct Equipment {
     string name; string type; int value; int subValue;
@@ -790,6 +833,41 @@ void loadAllGameData(Skill skillDB[][10]) {
     ifstream t5("monsters.json");if (t5.good()) { t5.close(); loadMonstersJson("monsters.json"); }     else { t5.close(); writeMonstersJson("monsters.json"); }
 }
 
+// 🏁 結算畫面（通關或陣亡都用）：顯示戰績與評價
+void showResultScreen(Character& p, int wave, int gold, bool won) {
+    clearScreen();
+    string rank;
+    if (won) rank = (gTurns <= 40 ? "S" : "A");
+    else if (wave >= 8) rank = "B";
+    else if (wave >= 5) rank = "C";
+    else rank = "D";
+    const char* rc = (rank == "S") ? C_YELLOW : (rank == "A" ? C_MAGENTA : (rank == "B" ? C_CYAN : C_GRAY));
+
+    cout << (won ? C_YELLOW : C_RED);
+    cout << "╔═══════════════════════════════════════════════╗\n";
+    if (won) cout << "║        🏆  通  關  成  功  ！  🏆             ║\n";
+    else     cout << "║           💀  遊  戲  結  束  💀              ║\n";
+    cout << "╚═══════════════════════════════════════════════╝" << C_RESET << "\n\n";
+
+    if (won) cout << C_GREEN << " 你擊敗了遠古滅世巨龍，奪回聖物，黑夜終於散去。\n 大陸的人們將永遠傳頌你的名字——\n" << C_RESET << "\n";
+    else     cout << C_GRAY << " 勇者 " << p.name << " 的冒險在此止步...\n 但傳說不會就此結束，讀取存檔再戰一次吧。\n" << C_RESET << "\n";
+
+    cout << C_CYAN << "─────────────── 📊 最終戰績 ───────────────" << C_RESET << "\n";
+    cout << "  勇者：" << C_BOLD << p.name << C_RESET << "  (" << p.job << ")  Lv." << p.level << "\n";
+    cout << "  推進波數：" << (won ? 10 : wave) << " / 10\n";
+    cout << "  擊殺魔物：" << gKills << " 隻\n";
+    cout << "  累計傷害：" << C_RED << gTotalDamage << C_RESET << "\n";
+    cout << "  最大單擊：" << C_RED << C_BOLD << gMaxHit << C_RESET << "\n";
+    cout << "  絕招發動：" << C_MAGENTA << gUltUsed << C_RESET << " 次\n";
+    cout << "  總回合數：" << gTurns << "\n";
+    cout << "  持有金幣：" << C_YELLOW << gold << C_RESET << "\n";
+    cout << "  最終裝備：" << p.weapon.name << " ／ " << p.armor.name << "\n";
+    cout << C_CYAN << "───────────────────────────────────────────" << C_RESET << "\n";
+    cout << "            評價： " << rc << C_BOLD << "【 " << rank << " 】" << C_RESET << "\n";
+    cout << C_CYAN << "───────────────────────────────────────────" << C_RESET << "\n";
+    waitPlayer();
+}
+
 int rollGachaJob() {
     int roll = rand() % 100;
     vector<int> pool;
@@ -803,6 +881,7 @@ int rollGachaJob() {
 int main() {
     #ifdef _WIN32
     static bool initMenu = [](){ system("chcp 65001 > nul"); return true; }();
+    enableAnsiColors(); // 🎨 啟用顏色
     #endif
     srand(time(0));
 
@@ -1003,14 +1082,28 @@ int main() {
 
         while (player.statPoints > 0) {
             clearScreen();
-            cout << "=========================================\n        💪 英雄聖殿：配點分配 💪         \n=========================================\n";
-            cout << " 剩餘可用點數: ✨ " << player.statPoints << " 點\n----------------------------------------=\n";
-            cout << " [ 1 ] ⚔️ 力量 (目前: " << player.strength << ") -> 增加總攻擊力\n [ 2 ] 🛡️ 體質 (目前: " << player.constitution << ") -> 增加最大生命值\n [ 3 ] ⚡ 敏捷 (目前: " << player.agility << ") -> 增加 1% 閃避率\n [ 4 ] 🍀 幸運 (目前: " << player.lucky << ") -> 增加 1% 暴擊率\n=========================================\n請選擇要投資的屬性 (1-4): ";
+            cout << C_CYAN << "=========================================\n        💪 英雄聖殿：配點分配 💪         \n=========================================" << C_RESET << "\n";
+            cout << " 剩餘可用點數: " << C_YELLOW << C_BOLD << "✨ " << player.statPoints << " 點" << C_RESET << "\n-----------------------------------------\n";
+            cout << " [ 1 ] ⚔️ 力量 (目前: " << player.strength << ") -> 增加總攻擊力\n [ 2 ] 🛡️ 體質 (目前: " << player.constitution << ") -> 增加最大生命值\n [ 3 ] ⚡ 敏捷 (目前: " << player.agility << ") -> 增加 1% 閃避率\n [ 4 ] 🍀 幸運 (目前: " << player.lucky << ") -> 增加 1% 暴擊率\n";
+            cout << " [ 5 ] ⚡ 一鍵平均分配剩餘全部點數\n";
+            cout << C_CYAN << "=========================================" << C_RESET << "\n請選擇 (1-5): ";
             int statChoice; if (!(cin >> statChoice)) { cin.clear(); cin.ignore(1000, '\n'); continue; }
             cin.ignore(1000, '\n');
-            if (statChoice < 1 || statChoice > 4) { cout << "❌ 請輸入 1~4！\n"; waitPlayer(); continue; } // 無效輸入不扣點
-            if (statChoice == 1) player.strength++; else if (statChoice == 2) player.constitution++; else if (statChoice == 3) player.agility++; else if (statChoice == 4) player.lucky++;
-            player.statPoints--; player.updateStats();
+            if (statChoice == 5) { // 平均分配，餘數給力量
+                int each = player.statPoints / 4, rem = player.statPoints % 4;
+                player.strength += each + rem; player.constitution += each; player.agility += each; player.lucky += each;
+                player.statPoints = 0; player.updateStats();
+                cout << C_GREEN << "✅ 已平均分配完畢！" << C_RESET << "\n"; waitPlayer(); continue;
+            }
+            if (statChoice < 1 || statChoice > 4) { cout << C_RED << "❌ 請輸入 1~5！" << C_RESET << "\n"; waitPlayer(); continue; }
+            cout << "👉 要投入幾點？(1~" << player.statPoints << "，直接按 Enter = 全部投入): ";
+            string line; getline(cin, line);
+            int n = player.statPoints; // 預設全投
+            if (!line.empty()) { try { n = stoi(line); } catch (...) { n = 1; } }
+            if (n < 1) n = 1; if (n > player.statPoints) n = player.statPoints; // 夾在合法範圍
+            if (statChoice == 1) player.strength += n; else if (statChoice == 2) player.constitution += n;
+            else if (statChoice == 3) player.agility += n; else if (statChoice == 4) player.lucky += n;
+            player.statPoints -= n; player.updateStats();
         }
 
         if (wave > 1 && wave % 2 == 0) {
@@ -1063,21 +1156,23 @@ int main() {
 
         while (player.isAlive() && mHp > 0) {
             clearScreen();
-            cout << "=================================================\n";
-            cout << " 🗺️ " << currentChapter << " (第 " << wave << " 波)\n";
-            cout << "=================================================\n";
-            cout << " 【" << player.name << "】(" << player.job << ") Lv." << player.level << "\n";
-            cout << "  💖 HP: " << player.hp << "/" << player.maxHp << " | ✨ MP: " << player.mp << "/" << player.maxMp << " | 🧪 x" << potions << "\n";
-            cout << "  🗡️ 武器: " << player.weapon.name << (player.weapon.wclass.empty() ? "" : "[" + player.weapon.wclass + "]") << (player.weapon.element != "無" ? "(" + player.weapon.element + "屬性)" : "")
-                 << " ｜ 🛡️ 防具: " << player.armor.name << (player.armor.element != "無" ? " (" + player.armor.element + ")" : "") << "\n";
-            if (pAtkBuff > 0) cout << "  [狀態] ⚔️ 攻擊提升 +" << pAtkBuff << "\n";
-            if (pDefBuff > 0) cout << "  [狀態] 🛡️ 防禦提升 +" << pDefBuff << "\n";
-            if (pBurnDuration > 0) cout << "  [異常] 🤢 中毒流血中 (剩餘 " << pBurnDuration << " 回合)\n";
-            cout << "-------------------------------------------------\n";
-            cout << " 【" << mName << "】 HP: " << mHp << "\n";
-            if (mBurnDuration > 0) cout << "  [異常] 🔥 燃燒中 (每回合 -" << mBurnDamage << ")\n";
-            if (mStunned) cout << "  [異常] ⚡ 麻痺暈眩中\n";
-            cout << "=================================================\n\n";
+            cout << C_CYAN << "═════════════════════════════════════════════════" << C_RESET << "\n";
+            cout << " 🗺️ " << C_CYAN << currentChapter << C_RESET << "  " << C_GRAY << "(第 " << wave << " 波)" << C_RESET << "\n";
+            cout << C_CYAN << "═════════════════════════════════════════════════" << C_RESET << "\n";
+            cout << " " << C_BOLD << "【" << player.name << "】" << C_RESET << C_GRAY << "(" << player.job << ") Lv." << player.level << C_RESET << "\n";
+            cout << "  💖 " << makeBar(player.hp, player.maxHp) << " " << player.hp << "/" << player.maxHp << "\n";
+            cout << "  ✨ MP " << player.mp << "/" << player.maxMp << "  ｜ 🧪 藥水 x" << potions << "  ｜ " << C_YELLOW << "💰 " << gold << C_RESET << "\n";
+            cout << "  " << C_GRAY << "🗡️ " << player.weapon.name << (player.weapon.wclass.empty() ? "" : "[" + player.weapon.wclass + "]") << (player.weapon.element != "無" ? "(" + player.weapon.element + ")" : "")
+                 << " ｜ 🛡️ " << player.armor.name << (player.armor.element != "無" ? "(" + player.armor.element + ")" : "") << C_RESET << "\n";
+            if (pAtkBuff > 0) cout << "  " << C_YELLOW << "[狀態] ⚔️ 攻擊提升 +" << pAtkBuff << C_RESET << "\n";
+            if (pDefBuff > 0) cout << "  " << C_BLUE << "[狀態] 🛡️ 防禦提升 +" << pDefBuff << C_RESET << "\n";
+            if (pBurnDuration > 0) cout << "  " << C_RED << "[異常] 🤢 中毒流血中 (剩餘 " << pBurnDuration << " 回合)" << C_RESET << "\n";
+            cout << C_GRAY << "-------------------------------------------------" << C_RESET << "\n";
+            cout << " " << C_BOLD << "【" << mName << "】" << C_RESET << "\n";
+            cout << "  👹 " << makeBar(mHp, mHpMax) << " " << (mHp < 0 ? 0 : mHp) << "/" << mHpMax << "\n";
+            if (mBurnDuration > 0) cout << "  " << C_RED << "[異常] 🔥 燃燒中 (每回合 -" << mBurnDamage << ")" << C_RESET << "\n";
+            if (mStunned) cout << "  " << C_YELLOW << "[異常] ⚡ 麻痺暈眩中" << C_RESET << "\n";
+            cout << C_CYAN << "═════════════════════════════════════════════════" << C_RESET << "\n\n";
 
             // 🌟 結算持續傷害狀態
             if (pBurnDuration > 0) {
@@ -1088,7 +1183,7 @@ int main() {
             if (mBurnDuration > 0) {
                 cout << "🔥 燃燒效果發作！" << mName << " 受到了 " << mBurnDamage << " 點灼燒傷害！\n";
                 mHp -= mBurnDamage; mBurnDuration--;
-                if (mHp <= 0) { cout << "💀 魔物被燒死了！\n"; cout << "\n🎉 勝利！獲得經驗值與金幣！\n"; gold += 25 + (wave * 2); battlePause(); break; }
+                if (mHp <= 0) { gKills++; cout << "💀 魔物被燒死了！\n"; cout << "\n" << C_GREEN << C_BOLD << "🎉 勝利！" << C_RESET << C_YELLOW << " 💰+" << (25 + wave * 2) << C_RESET << "\n"; gold += 25 + (wave * 2); battlePause(); break; }
             }
 
             cout << "1. 🗡️ 普通攻擊 | 2. 🔮 使用技能 | 3. 🧪 喝藥水 | 4. ⚡ 戰鬥速度(目前:" << battleSpeedName() << ")\n";
@@ -1105,7 +1200,7 @@ int main() {
                 cout << "\n========== ⚔️ 你的回合 ==========\n";
                 cout << "🗡️ 你揮舞【" << player.weapon.name << "】朝著 " << mName << " 攻擊！\n";
                 finalDamage = player.atk + pAtkBuff + (rand() % 6 - 3);
-                if (rand() % 100 < player.critChance) { finalDamage *= 2; cout << "🔥 暴擊！威力翻倍！\n"; }
+                if (rand() % 100 < player.critChance) { finalDamage *= 2; cout << C_YELLOW << C_BOLD << "🔥 暴擊！威力翻倍！" << C_RESET << "\n"; }
                 // 🌟 武器元素屬性觸發
                 string el = player.weapon.element;
                 if (el == "火") {
@@ -1148,10 +1243,12 @@ int main() {
                         finalDamage = (player.atk + pAtkBuff) * effMult;
                         if (player.job == "刺客" && skChoice >= 2) finalDamage *= 2;
                         if (isUlt && !sk.flavor.empty()) {
-                            cout << "\n✨✨✨ 絕招發動！ ✨✨✨\n" << sk.flavor << "\n";
-                            cout << "──【" << sk.name << "】(絕招 Lv." << player.skillLevel[skChoice-1] << ")──\n";
+                            gUltUsed++;
+                            cout << "\n" << C_MAGENTA << C_BOLD << "✨✨✨ 絕 招 發 動 ！ ✨✨✨" << C_RESET << "\n";
+                            cout << C_MAGENTA << sk.flavor << C_RESET << "\n";
+                            cout << C_MAGENTA << "──【" << sk.name << "】(絕招 Lv." << player.skillLevel[skChoice-1] << ")──" << C_RESET << "\n";
                         } else {
-                            cout << "\n🌟 使出絕招【" << sk.name << "】(技能 Lv." << player.skillLevel[skChoice-1] << ")！\n";
+                            cout << "\n" << C_BLUE << "🌟 使出技能【" << sk.name << "】(Lv." << player.skillLevel[skChoice-1] << ")！" << C_RESET << "\n";
                         }
                         if (sk.attribute == "BURN") { mBurnDamage = sk.attrValue; mBurnDuration = 3; cout << " ➥ 附加：施加了烈焰/劇毒！\n"; }
                         else if (sk.attribute == "STUN") { mStunned = true; cout << " ➥ 附加：強大的衝擊讓魔物暈眩了！\n"; }
@@ -1167,11 +1264,17 @@ int main() {
             }
 
             if (tookAction) {
-                if (finalDamage > 0) { mHp -= finalDamage; cout << " 👉 造成了 " << finalDamage << " 點直接傷害！ (" << mName << " 剩餘 HP: " << (mHp < 0 ? 0 : mHp) << ")\n"; }
+                gTurns++;
+                if (finalDamage > 0) {
+                    mHp -= finalDamage;
+                    gTotalDamage += finalDamage; if (finalDamage > gMaxHit) gMaxHit = finalDamage; // 戰績統計
+                    cout << " 👉 造成了 " << C_RED << C_BOLD << finalDamage << C_RESET << " 點傷害！\n";
+                    cout << "    " << makeBar(mHp, mHpMax) << " " << (mHp < 0 ? 0 : mHp) << "/" << mHpMax << "\n";
+                }
                 player.mp = min(player.maxMp, player.mp + player.mpRegen);
             } else continue;
 
-            if (mHp <= 0) { cout << "\n🎉 勝利！擊敗了 " << mName << "！獲得經驗值與金幣！\n"; gold += 25 + (wave * 2); battlePause(); break; }
+            if (mHp <= 0) { gKills++; cout << "\n" << C_GREEN << C_BOLD << "🎉 勝利！擊敗了 " << mName << "！" << C_RESET << C_YELLOW << " 💰+" << (25 + wave * 2) << C_RESET << "\n"; gold += 25 + (wave * 2); battlePause(); break; }
 
             battlePause(); // 先讓玩家看清自己這回合的攻擊結果，再進入敵方回合
 
@@ -1229,7 +1332,8 @@ int main() {
                         mHp -= reflect;
                         cout << "🌵【" << player.armor.name << "・反傷】" << mName << " 受到了 " << reflect << " 點反彈傷害！(剩餘 HP: " << (mHp < 0 ? 0 : mHp) << ")\n";
                         if (mHp <= 0 && player.isAlive()) {
-                            cout << "\n🎉 勝利！" << mName << " 被反傷擊倒了！獲得經驗值與金幣！\n";
+                            gKills++;
+                            cout << "\n" << C_GREEN << C_BOLD << "🎉 勝利！" << mName << " 被反傷擊倒了！" << C_RESET << C_YELLOW << " 💰+" << (25 + wave * 2) << C_RESET << "\n";
                             gold += 25 + (wave * 2); battlePause(); break;
                         }
                     }
@@ -1246,8 +1350,9 @@ int main() {
                 cout << " 📈 【戰後結算】\n";
                 cout << "=================================================\n";
                 player.gainExp(wave * 130);
-                cout << "\n🏆🏆🏆 恭喜你！擊敗了最終滅世巨龍，拯救了世界！ 🏆🏆🏆\n";
-                waitPlayer(); break;
+                waitPlayer();
+                showResultScreen(player, wave, gold, true); // 🏆 通關結算
+                break;
             }
             wave++;
             cout << "\n=================================================\n";
@@ -1258,14 +1363,7 @@ int main() {
         }
     }
     if (!player.isAlive()) {
-        clearScreen();
-        cout << "=================================================\n";
-        cout << "                💀 遊戲結束 💀                 \n";
-        cout << "=================================================\n";
-        cout << " 勇者 " << player.name << " (" << player.job << " Lv." << player.level << ") 倒下了...\n";
-        cout << " 你堅持到了第 " << wave << " 波。下次讀取存檔再來挑戰吧！\n";
-        cout << "=================================================\n";
-        waitPlayer();
+        showResultScreen(player, wave, gold, false); // 💀 陣亡結算
     }
     return 0;
 }
