@@ -126,6 +126,26 @@ int getJobIndex(string jName) {
     return 0;
 }
 
+// === 🌑 魔法階位（暗黑世界觀）===
+// 表面是修煉突破，實則是「太陽之核」寄生越來越深的五個階段
+int getRankIndex(int lv) {
+    if (lv <= 2) return 0;      // 微光者
+    if (lv <= 5) return 1;      // 銘刻者
+    if (lv <= 9) return 2;      // 結晶者
+    if (lv <= 13) return 3;     // 共鳴者
+    return 4;                   // 受冕者
+}
+string getRankName(int lv) {
+    const char* names[5] = {"微光者", "銘刻者", "結晶者", "共鳴者", "受冕者"};
+    return names[getRankIndex(lv)];
+}
+// 寄生神經同步率（升越高，被太陽之核控制越深）
+int getSyncRate(int lv) {
+    int s = 8 + lv * 6;
+    if (s > 99) s = 99;
+    return s;
+}
+
 // === 角色類別 ===
 class Character {
 public:
@@ -172,14 +192,41 @@ public:
 
     void gainExp(int amount) {
         exp += amount;
-        cout << "✨ 獲得了 " << amount << " 點經驗值！ (" << exp << "/" << maxExp << ")\n";
+        cout << "✨ 汲取了 " << amount << " 縷魔力粉塵…… (" << exp << "/" << maxExp << ")\n";
         while (exp >= maxExp) {
+            int oldRank = getRankIndex(level);
             exp -= maxExp; level++; maxExp = 100 + (level * 50); statPoints += 4;
-            cout << "\n🎉🎉🎉 【升級！】 🎉🎉🎉\n 恭喜升到了 Lv." << level << "！獲得 4 點屬性點！\n";
+            cout << "\n🎉🎉🎉 【突破！】 🎉🎉🎉\n 恭喜突破至 Lv." << level << "！魔力上限提升，獲得 4 點屬性點！\n";
             updateStats();
             hp = min(maxHp, hp + 30);
             if (job != "狂戰士") mp = min(maxMp, mp + 15);
+            // 🩸 底部紅字：表面榮耀，實則寄生加深
+            cout << C_GRAY << "  [系統警告] 寄生神經對接宿主大腦，同步率 " << getSyncRate(level) << "%\n" << C_RESET;
+            // 🌑 跨越魔法階位時，掀開一層真相
+            int newRank = getRankIndex(level);
+            if (newRank > oldRank) revealRank(newRank);
         }
+    }
+
+    // 晉升魔法階位時的「表面 + 真相」演出
+    void revealRank(int r) {
+        const char* title[5] = {"微光者", "銘刻者", "結晶者", "共鳴者", "受冕者"};
+        const char* glory[5] = {
+            "你覺醒了魔力感應，教會稱你為「受神眷顧的雛鳥」。",
+            "你在靈魂表面刻下魔力迴路，成為正式法師，施法更快更強。",
+            "你的心臟凝聚出硬幣大小的『魔導原核』，壽命延長，魔力近乎無限。",
+            "你能召喚古代英靈與自身疊加，施展毀滅級的禁咒。",
+            "你的肉身轉化為半神光體，被尊為『神的地上代理人』。"};
+        const char* truth[5] = {
+            "…你吸入肺腑的魔力，其實是太陽之核碾碎歷史人類靈魂的精神粉塵。",
+            "…那不是導體，是太陽之核植入你體內、監視思想的『生物神經汲取網』。",
+            "…原核是『熟透的結晶化靈魂』；你，已被列為收割的候補燃料。",
+            "…英靈不是認可你，是慘死勇者的殘魂被強行縫進你的靈魂，替你承受反噬。",
+            "…你已失去作為人的主權，成為太陽之核的實體接收終端。"};
+        cout << "\n" << C_CYAN << "═══════ 魔法階位晉升：【" << title[r] << "】 ═══════\n" << C_RESET;
+        cout << C_YELLOW << " " << glory[r] << "\n" << C_RESET;
+        cout << C_RED << " " << truth[r] << "\n" << C_RESET;
+        cout << C_CYAN << "════════════════════════════════════\n" << C_RESET;
     }
 };
 
@@ -871,10 +918,13 @@ void showResultScreen(Character& p, int wave, int gold, bool won) {
 int rollGachaJob() {
     int roll = rand() % 100;
     vector<int> pool;
-    if (roll < 3) { pool = {12, 13, 15, 16}; cout << "\n🌟🌟🌟 金光閃爍！獲得 SSR 職業！\n"; }
-    else if (roll < 18) { pool = {8, 9, 10, 11, 17}; cout << "\n✨ 紫光綻放！獲得 SR 職業！\n"; }
-    else if (roll < 48) { pool = {3, 6, 7}; cout << "\n🔵 藍光一閃！獲得 R 職業！\n"; }
-    else { pool = {0, 1, 2, 4, 5}; cout << "\n⚪ 命運的輪盤停止，獲得 N 職業。\n"; }
+    // 🩸 英靈縫合術：從地下深淵挖出歷代慘死勇者的殘魂，刺進你的脊椎
+    cout << "\n🕯️ 教會將一枚枚泛黃的靈魂碎片壓入你的脊骨……\n";
+    if (roll < 3) { pool = {12, 13, 15, 16}; cout << "🌟🌟🌟 金光炸裂！一縷『傳說級英靈』的殘魂與你縫合了！(SSR)\n"; }
+    else if (roll < 18) { pool = {8, 9, 10, 11, 17}; cout << "✨ 紫燄纏繞！一名『稀有英靈』被強行嫁接上身。(SR)\n"; }
+    else if (roll < 48) { pool = {3, 6, 7}; cout << "🔵 藍光一閃，一段陌生的死亡記憶湧入腦海。(R)\n"; }
+    else { pool = {0, 1, 2, 4, 5}; cout << "⚪ 一縷無名亡魂沉入你的體內，隱隱傳來啜泣。(N)\n"; }
+    cout << C_GRAY << "  [系統標記] 已將 1 具勇者殘魂縫合至宿主靈魂，精神污染度上升。\n" << C_RESET;
     return pool[rand() % pool.size()];
 }
 
@@ -1113,14 +1163,14 @@ int main() {
                 cout << "=================================\n         🏪 流浪商人營地         \n=================================\n";
                 cout << " 金幣: ✨ " << gold << " | 藥水: 🧪 " << potions << " | 勇者等級: Lv." << player.level << "\n---------------------------------\n";
                 int shopChapter = (wave <= 3) ? 1 : (wave <= 6 ? 2 : 3);
-                cout << "1. 🛒 購買生命藥水 (💰 20 金幣)\n2. 🗡️ 逛武器鍛造鋪\n3. 🛡️ 逛防具鎧甲鋪\n4. 💾 儲存目前遊戲進度\n5. 🏃 離開營地繼續前進\n";
+                cout << "1. 🧪 購買【靈魂過濾溶劑】(💰 20 金幣)\n2. 🗡️ 逛武器鍛造鋪\n3. 🛡️ 逛防具鎧甲鋪\n4. 💾 儲存目前遊戲進度\n5. 🏃 離開營地繼續前進\n";
                 if (isControlMode) cout << "0. ⚙️ 開啟控制台 (修改數值)\n";
                 cout << "請選擇: ";
                 int shopChoice; if (!(cin >> shopChoice)) { cin.clear(); cin.ignore(1000, '\n'); continue; }
                 cin.ignore(1000, '\n');
 
                 if (shopChoice == 1) {
-                    if (gold >= 20) { gold -= 20; potions++; cout << "🛒 購買成功！\n"; } else { cout << "❌ 金幣不足！\n"; } waitPlayer();
+                    if (gold >= 20) { gold -= 20; potions++; cout << "🛒 交易成功。\n" << C_GRAY << "  （溶劑在瓶中緩緩蠕動，彷彿還記得自己曾是誰。）\n" << C_RESET; } else { cout << "❌ 金幣不足！\n"; } waitPlayer();
                 }
                 else if (shopChoice == 2) { weaponShop(player, gold, shopChapter); }
                 else if (shopChoice == 3) { armorShop(player, gold, shopChapter); }
@@ -1159,7 +1209,9 @@ int main() {
             cout << C_CYAN << "═════════════════════════════════════════════════" << C_RESET << "\n";
             cout << " 🗺️ " << C_CYAN << currentChapter << C_RESET << "  " << C_GRAY << "(第 " << wave << " 波)" << C_RESET << "\n";
             cout << C_CYAN << "═════════════════════════════════════════════════" << C_RESET << "\n";
-            cout << " " << C_BOLD << "【" << player.name << "】" << C_RESET << C_GRAY << "(" << player.job << ") Lv." << player.level << C_RESET << "\n";
+            cout << " " << C_BOLD << "【" << player.name << "】" << C_RESET << C_GRAY << "(" << player.job << ") Lv." << player.level
+                 << C_RESET << C_MAGENTA << " ﹝" << getRankName(player.level) << "﹞" << C_RESET
+                 << C_GRAY << " 同步率" << getSyncRate(player.level) << "%" << C_RESET << "\n";
             cout << "  💖 " << makeBar(player.hp, player.maxHp) << " " << player.hp << "/" << player.maxHp << "\n";
             cout << "  ✨ MP " << player.mp << "/" << player.maxMp << "  ｜ 🧪 藥水 x" << potions << "  ｜ " << C_YELLOW << "💰 " << gold << C_RESET << "\n";
             cout << "  " << C_GRAY << "🗡️ " << player.weapon.name << (player.weapon.wclass.empty() ? "" : "[" + player.weapon.wclass + "]") << (player.weapon.element != "無" ? "(" + player.weapon.element + ")" : "")
@@ -1259,8 +1311,8 @@ int main() {
                     } else { cout << "❌ 魔力不足！(需 " << sk.mpCost << " MP，目前 " << player.mp << ")\n"; waitPlayer(); continue; }
                 } else { cout << "❌ 無效的技能編號！\n"; waitPlayer(); continue; }
             } else if (choice == 3) {
-                if (potions > 0) { potions--; player.hp = min(player.maxHp, player.hp + 60); cout << "🧪 回復了 60 點生命值！\n"; tookAction = true; }
-                else { cout << "❌ 沒有藥水了！\n"; waitPlayer(); continue; }
+                if (potions > 0) { potions--; player.hp = min(player.maxHp, player.hp + 60); cout << "🧪 你飲下靈魂溶劑，回復 60 點生命；腦中的尖叫暫時被壓了下去…\n"; tookAction = true; }
+                else { cout << "❌ 沒有溶劑了！殘魂的低語又響了起來…\n"; waitPlayer(); continue; }
             }
 
             if (tookAction) {
