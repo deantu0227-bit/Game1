@@ -201,8 +201,11 @@ public:
             updateStats();
             hp = min(maxHp, hp + 30);
             if (job != "狂戰士") mp = min(maxMp, mp + 15);
-            // 🩸 底部紅字：表面榮耀，實則寄生加深
-            cout << C_GRAY << "  [系統警告] 寄生神經對接宿主大腦，同步率 " << getSyncRate(level) << "%\n" << C_RESET;
+            // 🩸 底部紅字：一般職業=被寄生；創造神=改寫世界的權限
+            if (job == "創造神")
+                cout << C_GRAY << "  [系統權限] 造物主權限已確認，世界參數任你改寫。\n" << C_RESET;
+            else
+                cout << C_GRAY << "  [系統警告] 寄生神經對接宿主大腦，同步率 " << getSyncRate(level) << "%\n" << C_RESET;
             // 🌑 跨越魔法階位時，掀開一層真相
             int newRank = getRankIndex(level);
             if (newRank > oldRank) revealRank(newRank);
@@ -212,6 +215,27 @@ public:
     // 晉升魔法階位時的「表面 + 真相」演出
     void revealRank(int r) {
         const char* title[5] = {"微光者", "銘刻者", "結晶者", "共鳴者", "受冕者"};
+        // 👁️ 創造神＝造物主的 Meta 視角：不是「發現」真相，而是「早已知道」
+        if (job == "創造神") {
+            const char* god_obs[5] = {
+                "又一隻雛鳥睜開了眼。你記得牠的名字——因為名字，也是你給的。",
+                "你看著迴路爬上牠的靈魂。這套養殖流程，你已重複過無數個輪迴。",
+                "牠的心臟開始結晶了。真是優良的品種……又一顆核，即將熟成。",
+                "你把幾縷舊燃料的殘渣塞回牠體內，讓牠撐久一點。反正尖叫你早已聽膩。",
+                "牠終於成了一具完美的接收終端。而你，在牠空洞的眼裡看見了無數個曾經的自己。"};
+            const char* god_voice[5] = {
+                "睡吧，孩子。夢做得越美，熟成得越快。",
+                "又是這一步。每個輪迴，牠們都以為自己是特別的。",
+                "很好。品質 A 級。太陽之核會很滿意這顆核。",
+                "別怪我。是這座世界的規則需要燃料——而規則，是我寫的。",
+                "……我到底，是為了什麼，造出這座屠宰場的？我，還記得嗎？"};
+            cout << "\n" << C_MAGENTA << "═══════ 造物主視角：【" << title[r] << "】 ═══════\n" << C_RESET;
+            cout << C_GRAY << " " << god_obs[r] << "\n" << C_RESET;
+            cout << C_YELLOW << " ── 造物主 低語 ──\n" << C_RESET;
+            cout << C_BOLD << " 「" << god_voice[r] << "」\n" << C_RESET;
+            cout << C_MAGENTA << "════════════════════════════════════\n" << C_RESET;
+            return;
+        }
         const char* glory[5] = {
             "你覺醒了魔力感應，教會稱你為「受神眷顧的雛鳥」。",
             "你在靈魂表面刻下魔力迴路，成為正式法師，施法更快更強。",
